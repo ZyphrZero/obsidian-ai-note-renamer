@@ -1,157 +1,90 @@
-# AI File Namer - Obsidian 插件
+# AI Note Renamer
 
-使用 AI 自动为 Obsidian 笔记生成准确、简洁的文件名。
+**AI Note Renamer** is a powerful Obsidian plugin that uses AI to intelligently analyze note content and generate accurate, concise, and habit-compliant filenames with one click. Say goodbye to naming difficulties and keep your knowledge base organized.
 
-## 功能特性
+[中文文档](./README_CN.md)
 
-- 🤖 **AI 驱动**：使用 OpenAI 兼容 API 智能分析笔记内容
-- 📝 **多种触发方式**：
-  - 命令面板（Ctrl/Cmd+P）
-  - 侧边栏图标按钮
-  - 编辑器右键菜单
-  - 文件资源管理器右键菜单
-- 🎯 **智能优化**：自动清理非法字符、处理文件名冲突
-- 🔧 **高度可配置**：
-  - 自定义 API 端点和密钥
-  - 调整模型参数（Temperature、Max Tokens、Top P）
-  - 自定义 Prompt 模板
-  - 多配置文件管理
-- 🌍 **兼容第三方 API**：支持任何 OpenAI 格式兼容的 API
+## ✨ Features
 
-## 安装
+*   **🧠 Intelligent Renaming**: Based on OpenAI-compatible APIs (supports GPT, Claude, DeepSeek, etc.), it deeply understands note content and generates the best filenames.
+*   **🖱️ Convenient Triggers**:
+    *   **Hover Magic Button**: Displays a floating button directly next to the note title, generating with a single click.
+    *   **Multiple Entry Points**: Supports sidebar icon, command palette, editor right-click, and file list right-click menus.
+*   **⚙️ Multi-Config Management**: Supports saving multiple sets of API configurations and quick switching.
+*   **🎨 Highly Customizable**:
+    *   Custom Prompt templates, supporting variable injection.
+    *   Fine-grained control of AI parameters (Temperature, Top P, Max Tokens).
+    *   **Context Awareness**: Option to reference the current filename for optimization.
+*   **🛡️ Robust Design**:
+    *   Supports "Chain of Thought" models (like DeepSeek R1), automatically filtering out `<think>` tags.
+    *   Intelligent API endpoint completion and correction.
+    *   Customizable request timeout settings.
 
-### 手动安装
+## 🚀 Installation
 
-1. 从 [Releases](https://github.com/yourusername/obsidian-ai-file-namer/releases) 下载最新版本
-2. 将 `main.js`、`manifest.json` 和 `styles.css` 复制到你的 vault 的 `.obsidian/plugins/ai-file-namer/` 目录下
-3. 在 Obsidian 设置中启用插件
+### Manual Installation (Recommended)
+1.  Download `main.js`, `manifest.json`, `styles.css` from [Releases](https://github.com/ZyphrZero/obsidian-ai-note-renamer/releases).
+2.  Place the files in your library directory: `.obsidian/plugins/ai-note-renamer/`.
+3.  Restart Obsidian and enable the plugin in the settings.
 
-### 从源码构建
-
+### Source Code Compilation
 ```bash
-# 克隆仓库
-git clone https://github.com/yourusername/obsidian-ai-file-namer.git
-cd obsidian-ai-file-namer
-
-# 安装依赖
+git clone https://github.com/ZyphrZero/obsidian-ai-note-renamer.git
+cd obsidian-ai-note-renamer
 npm install
-
-# 构建
 npm run build
 ```
 
-## 使用方法
+## 📖 User Guide
 
-### 1. 配置 API
+### 1. Configure API
+Enter **Settings > AI File Namer**:
+*   **API Endpoint**: Enter your API address (the plugin will automatically complete the path, like `/v1/chat/completions`).
+*   **API Key**: Enter your key.
+*   **Model**: Enter the model name (e.g., `gpt-4o`, `deepseek-chat`).
+*   Click **"Test Connection"** to ensure the configuration is correct.
 
-打开 Obsidian 设置 → AI File Namer，配置以下信息：
+### 2. Generate File Name
+You can trigger it in any of the following ways:
+*   **✨ Title Hover Button**: Hover over the title of the note (Inline Title) area, click the star icon that appears.
+*   **Command Palette**: `Ctrl/Cmd + P` input "Generate AI File Name".
+*   **Right-click Menu**: Right-click in the file list or editor area.
 
-- **API 端点**：例如 `https://api.openai.com/v1/chat/completions`
-- **API Key**：你的 API 密钥
-- **模型名称**：例如 `gpt-3.5-turbo` 或 `gpt-4`
+### 3. Prompt Template Variables
+In the settings, you can use the following variables when customizing the prompt:
+*   `{{content}}`: Note content snippet (smartly truncated).
+*   `{{currentFileName}}`: Current file name.
+*   `{{#if currentFileName}}...{{/if}}`: Conditional block that only displays when there is a file name.
 
-### 2. 生成文件名
+**Example Template:**
+```text
+Please read the following note content and generate a filename that is concise and highly summary.
+Do not include the extension, do not use special characters.
 
-有四种方式触发文件名生成：
-
-1. **命令面板**：按 `Ctrl/Cmd+P`，搜索 "生成 AI 文件名"
-2. **侧边栏按钮**：点击侧边栏的 ✨ 图标
-3. **编辑器右键**：在编辑器中右键点击，选择 "生成 AI 文件名"
-4. **文件管理器右键**：在文件列表中右键点击文件，选择 "生成 AI 文件名"
-
-### 3. 高级功能
-
-#### 自定义 Prompt 模板
-
-在设置中可以自定义 Prompt 模板，支持的变量：
-
-- `{{content}}` - 笔记内容（自动截取前 3000 字符）
-- `{{currentFileName}}` - 当前文件名
-- `{{#if currentFileName}}...{{/if}}` - 条件块
-
-示例模板：
-
-```
-请为以下笔记内容生成一个简洁、准确的文件名。
-{{#if currentFileName}}
-当前文件名：{{currentFileName}}
-请在此基础上改进，生成更准确的文件名。
-{{/if}}
-
-笔记内容：
+Note content:
 {{content}}
-
-要求：
-1. 文件名应该简洁明了，不超过30个字符
-2. 准确概括笔记的核心内容
-3. 使用中文或英文，避免特殊字符
-4. 只返回文件名本身，不要包含 .md 扩展名
-
-文件名：
 ```
 
-#### 调整 AI 参数
+## ⚙️ Advanced Settings
 
-- **Temperature (0-2)**：控制输出的随机性，较低的值使输出更确定
-- **Max Tokens**：生成的最大 token 数量（建议 50-200）
-- **Top P (0-1)**：控制输出多样性，较低的值使输出更集中
+*   **Use Current Filename as Context**: When enabled, the AI will know the current filename, allowing you to ask it to "optimize" the existing name instead of regenerating it.
+*   **Analyze Directory Naming Style**: (Experimental) Attempts to analyze the naming habits of other files in the same directory.
+*   **Debug Mode**: Output the full Prompt and API response in the developer console (Ctrl+Shift+I) for troubleshooting.
+*   **Timeout Settings**: You can appropriately increase the timeout period when the network is slow.
 
-## 兼容第三方 API
+## 🧩 FAQ
 
-本插件兼容任何 OpenAI 格式的 API，包括：
+**Q: Does it support DeepSeek or Claude?**
+A: Yes. This plugin is compatible with OpenAI format interfaces. For models like DeepSeek that output a "thinking process," the plugin automatically filters out `<think>` tags, keeping only the final result.
 
-- OpenAI 官方 API
-- Azure OpenAI
-- Claude (通过兼容层)
-- 本地部署的模型（如 LocalAI、Ollama）
-- 国内 AI 服务（如智谱 AI、百川等）
+**Q: Why hasn't the generated title changed?**
+A: Please check if the Prompt template is reasonable, or enable Debug Mode and press `Ctrl+Shift+I` to open the console and view the content actually returned by the AI.
 
-只需在设置中配置对应的 API 端点和密钥即可。
+---
+<div align="center">
 
-## 常见问题
+**Made with Love**
 
-### Q: API 调用失败怎么办？
+⭐ If this project helps you, please give us a Star! ❤️
 
-A: 请检查：
-1. API Key 是否正确
-2. API 端点是否正确
-3. 网络连接是否正常
-4. API 配额是否充足
-
-### Q: 生成的文件名不理想？
-
-A: 可以尝试：
-1. 调整 Temperature 参数（降低可能更稳定）
-2. 自定义 Prompt 模板，提供更明确的指导
-3. 确保笔记内容有足够的信息
-
-### Q: 支持批量处理吗？
-
-A: 目前版本仅支持单个文件处理，批量处理功能将在后续版本中添加。
-
-## 开发
-
-```bash
-# 开发模式（监听文件变化）
-npm run dev
-
-# 生产构建
-npm run build
-```
-
-## 许可证
-
-MIT
-
-## 致谢
-
-本插件使用以下开源项目：
-- [Obsidian API](https://github.com/obsidianmd/obsidian-api)
-- [esbuild](https://esbuild.github.io/)
-
-## 反馈与贡献
-
-欢迎提交 Issue 和 Pull Request！
-
-- GitHub: [https://github.com/yourusername/obsidian-ai-file-namer](https://github.com/yourusername/obsidian-ai-file-namer)
-- Issues: [https://github.com/yourusername/obsidian-ai-file-namer/issues](https://github.com/yourusername/obsidian-ai-file-namer/issues)
+</div>

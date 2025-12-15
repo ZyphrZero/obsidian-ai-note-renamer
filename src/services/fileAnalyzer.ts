@@ -10,31 +10,56 @@ export class FileAnalyzer {
   /**
    * 分析目录下文件的命名风格
    * @param currentFile 当前文件
+   * @param debugMode 是否启用调试模式
    * @param maxSamples 最大采样数量（默认10个）
    * @returns 命名风格描述
    */
-  async analyzeDirectoryNamingStyle(currentFile: TFile, maxSamples: number = 10): Promise<string> {
+  async analyzeDirectoryNamingStyle(currentFile: TFile, debugMode: boolean = false, maxSamples: number = 10): Promise<string> {
     const directory = currentFile.parent;
 
     if (!directory) {
+      if (debugMode) {
+        console.log('[FileAnalyzer] 当前文件没有父目录');
+      }
       return '';
+    }
+
+    if (debugMode) {
+      console.log(`[FileAnalyzer] 正在分析目录: ${directory.path}`);
     }
 
     // 获取同目录下的其他 Markdown 文件
     const siblingFiles = this.getSiblingFiles(currentFile, directory);
 
+    if (debugMode) {
+      console.log(`[FileAnalyzer] 找到 ${siblingFiles.length} 个同目录文件`);
+    }
+
     if (siblingFiles.length === 0) {
+      if (debugMode) {
+        console.log('[FileAnalyzer] 目录下没有其他文件，跳过分析');
+      }
       return '';
     }
 
     // 采样文件名（限制数量以提高性能）
     const samples = siblingFiles.slice(0, maxSamples);
-    const fileNames = samples.map(file => file.basename);
+    const fileNames = samples.map((file: TFile) => file.basename);
+
+    if (debugMode) {
+      console.log(`[FileAnalyzer] 采样文件名:`, fileNames);
+    }
 
     // 分析命名模式
     const analysis = this.analyzeNamingPatterns(fileNames);
 
-    return this.formatAnalysisResult(analysis, fileNames);
+    const result = this.formatAnalysisResult(analysis, fileNames);
+
+    if (debugMode) {
+      console.log(`[FileAnalyzer] 分析结果:\n${result}`);
+    }
+
+    return result;
   }
 
   /**

@@ -1,10 +1,10 @@
 {
-  "id": "ai-file-namer",
-  "name": "AI File Namer",
+  "id": "ai-note-renamer",
+  "name": "AI Note Renamer",
   "version": "1.0.0",
   "minAppVersion": "0.15.0",
   "description": "使用 AI 自动为笔记生成准确、简洁的文件名",
-  "author": "Your Name",
-  "authorUrl": "https://github.com/yourusername",
+  "author": "ZyphrZero",
+  "authorUrl": "https://github.com/ZyphrZero",
   "isDesktopOnly": false
 }

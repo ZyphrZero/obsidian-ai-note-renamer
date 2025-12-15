@@ -1,5 +1,87 @@
-import { App, PluginSettingTab, Setting } from 'obsidian';
+import { App, PluginSettingTab, Setting, Modal, Notice } from 'obsidian';
 import type AIFileNamerPlugin from '../main';
+import { BASE_PROMPT_TEMPLATE } from './settings';
+
+/**
+ * 配置重命名弹窗
+ */
+class RenameConfigModal extends Modal {
+  private currentName: string;
+  private onSubmit: (newName: string) => void;
+
+  constructor(app: App, currentName: string, onSubmit: (newName: string) => void) {
+    super(app);
+    this.currentName = currentName;
+    this.onSubmit = onSubmit;
+  }
+
+  onOpen() {
+    const { contentEl } = this;
+    contentEl.empty();
+
+    contentEl.createEl('h2', { text: '重命名配置' });
+
+    // 创建输入框
+    const inputContainer = contentEl.createDiv({ cls: 'setting-item' });
+    const input = inputContainer.createEl('input', {
+      type: 'text',
+      value: this.currentName
+    });
+    input.style.width = '100%';
+    input.style.padding = '8px';
+    input.style.marginBottom = '16px';
+
+    // 选中当前文本
+    input.select();
+
+    // 创建按钮容器
+    const buttonContainer = contentEl.createDiv({ cls: 'modal-button-container' });
+    buttonContainer.style.display = 'flex';
+    buttonContainer.style.justifyContent = 'flex-end';
+    buttonContainer.style.gap = '8px';
+
+    // 取消按钮
+    const cancelButton = buttonContainer.createEl('button', { text: '取消' });
+    cancelButton.addEventListener('click', () => {
+      this.close();
+    });
+
+    // 确认按钮
+    const confirmButton = buttonContainer.createEl('button', {
+      text: '确认',
+      cls: 'mod-cta'
+    });
+    confirmButton.addEventListener('click', () => {
+      const newName = input.value.trim();
+      if (newName) {
+        this.onSubmit(newName);
+        this.close();
+      }
+    });
+
+    // 回车键提交
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        const newName = input.value.trim();
+        if (newName) {
+          this.onSubmit(newName);
+          this.close();
+        }
+      } else if (e.key === 'Escape') {
+        this.close();
+      }
+    });
+
+    // 聚焦输入框
+    input.focus();
+  }
+
+  onClose() {
+    const { contentEl } = this;
+    contentEl.empty();
+  }
+}
 
 /**
  * 设置标签页类
@@ -17,7 +99,18 @@ export class AIFileNamerSettingTab extends PluginSettingTab {
     const { containerEl } = this;
     containerEl.empty();
 
-    containerEl.createEl('h2', { text: 'AI 文件名生成器设置' });
+    containerEl.createEl('h2', { text: 'AI Note Renamer' });
+
+    // GitHub Feedback Link
+    const feedbackContainer = containerEl.createDiv({ cls: 'setting-item-description' });
+    feedbackContainer.style.marginTop = '-10px';
+    feedbackContainer.style.marginBottom = '20px';
+    feedbackContainer.appendText('谢谢你的使用~欢迎反馈！戳这里：');
+    feedbackContainer.createEl('a', {
+      text: 'GitHub',
+      href: 'https://github.com/ZyphrZero/obsidian-ai-note-renamer'
+    });
+
 
     // 配置选择
     this.renderConfigSelector(containerEl);
@@ -57,6 +150,86 @@ export class AIFileNamerSettingTab extends PluginSettingTab {
         });
       });
 
+    // 添加新配置按钮
+    new Setting(containerEl)
+      .setName('配置管理')
+      .setDesc('添加、重命名或删除 API 配置')
+      .addButton(button => button
+        .setButtonText('添加新配置')
+        .onClick(async () => {
+          // 生成新的配置 ID
+          const newId = `config-${Date.now()}`;
+
+          // 创建新配置
+          const newConfig = {
+            id: newId,
+            name: `配置 ${this.plugin.settings.configs.length + 1}`,
+            endpoint: 'https://api.openai.com/v1/chat/completions',
+            apiKey: '',
+            model: 'gpt-3.5-turbo',
+            temperature: 0.7,
+            maxTokens: 100,
+            topP: 1.0,
+            promptTemplate: this.plugin.settings.defaultPromptTemplate
+          };
+
+          // 添加到配置列表
+          this.plugin.settings.configs.push(newConfig);
+
+          // 设置为当前活动配置
+          this.plugin.settings.activeConfigId = newId;
+
+          // 保存设置
+          await this.plugin.saveSettings();
+
+          // 重新渲染界面
+          this.display();
+        }))
+      .addButton(button => button
+        .setButtonText('配置重命名')
+        .onClick(async () => {
+          const config = this.plugin.settings.configs.find(
+            c => c.id === this.plugin.settings.activeConfigId
+          );
+
+          if (!config) {
+            return;
+          }
+
+          // 创建重命名弹窗
+          const modal = new RenameConfigModal(this.app, config.name, async (newName) => {
+            if (newName && newName.trim()) {
+              config.name = newName.trim();
+              await this.plugin.saveSettings();
+              this.display();
+            }
+          });
+          modal.open();
+        }))
+      .addButton(button => button
+        .setButtonText('删除当前配置')
+        .setWarning()
+        .onClick(async () => {
+          // 不允许删除最后一个配置
+          if (this.plugin.settings.configs.length <= 1) {
+            return;
+          }
+
+          // 删除当前配置
+          this.plugin.settings.configs = this.plugin.settings.configs.filter(
+            c => c.id !== this.plugin.settings.activeConfigId
+          );
+
+          // 切换到第一个配置
+          this.plugin.settings.activeConfigId = this.plugin.settings.configs[0].id;
+
+          // 保存设置
+          await this.plugin.saveSettings();
+
+          // 重新渲染界面
+          this.display();
+        }));
+
     containerEl.createEl('h3', { text: `配置: ${currentConfig?.name || '默认配置'}` });
   }
 
@@ -75,20 +248,37 @@ export class AIFileNamerSettingTab extends PluginSettingTab {
     // API 端点
     new Setting(containerEl)
       .setName('API 端点')
-      .setDesc('OpenAI API 兼容的端点地址')
+      .setDesc('OpenAI API 兼容的端点地址（可以是基础 URL，完整路径将在运行时自动补全）')
       .addText(text => {
         text
           .setPlaceholder('https://api.openai.com/v1/chat/completions')
           .setValue(config.endpoint)
           .onChange(async (value) => {
-            config.endpoint = value;
+            // 直接保存用户输入的原始值，不进行补全
+            config.endpoint = value.trim();
             await this.plugin.saveSettings();
             updatePreview(value);
           });
 
         // 初始预览
         setTimeout(() => updatePreview(config.endpoint), 0);
-      });
+      })
+      .addButton(button => button
+        .setButtonText('测试连接')
+        .onClick(async () => {
+          button.setButtonText('测试中...');
+          button.setDisabled(true);
+
+          try {
+            await this.plugin.aiService.testConnection(config.id);
+            new Notice('✅ 连接成功！');
+          } catch (error) {
+            new Notice(`❌ 连接失败: ${error instanceof Error ? error.message : String(error)}`);
+          } finally {
+            button.setButtonText('测试连接');
+            button.setDisabled(false);
+          }
+        }));
 
     // 创建预览容器（在 API 端点设置项之后）
     const previewContainer = containerEl.createDiv({
@@ -100,7 +290,11 @@ export class AIFileNamerSettingTab extends PluginSettingTab {
       previewContainer.empty();
 
       if (value.trim()) {
-        previewContainer.setText(`预览: ${normalized.url}`);
+        const previewText = previewContainer.createDiv();
+        previewText.setText(`实际请求地址: ${normalized.url}`);
+        previewText.style.color = 'var(--text-muted)';
+        previewText.style.fontSize = '0.9em';
+        previewText.style.marginTop = '4px';
       }
     };
 
@@ -137,7 +331,7 @@ export class AIFileNamerSettingTab extends PluginSettingTab {
     // Temperature
     new Setting(containerEl)
       .setName('Temperature')
-      .setDesc('控制输出的随机性（0-2），较低的值使输出更确定')
+      .setDesc('控制文件名生成的创造性。值越低（接近 0）生成的文件名越保守、准确；值越高生成的文件名越有创意但可能偏离内容。建议设置为 0.3-0.7')
       .addSlider(slider => slider
         .setLimits(0, 2, 0.1)
         .setValue(config.temperature)
@@ -165,7 +359,7 @@ export class AIFileNamerSettingTab extends PluginSettingTab {
     // Top P
     new Setting(containerEl)
       .setName('Top P')
-      .setDesc('控制输出多样性（0-1），较低的值使输出更集中')
+      .setDesc('控制文件名用词的多样性。值越小生成的文件名用词越常见、简洁；值越大用词范围越广、越丰富。建议保持默认值 1.0')
       .addSlider(slider => slider
         .setLimits(0, 1, 0.05)
         .setValue(config.topP)
@@ -201,11 +395,18 @@ export class AIFileNamerSettingTab extends PluginSettingTab {
     // 重置为默认模板按钮
     new Setting(containerEl)
       .setName('重置 Prompt 模板')
-      .setDesc('恢复为默认的 Prompt 模板')
+      .setDesc('根据"使用当前文件名作为上下文"设置，恢复为对应的默认模板')
       .addButton(button => button
         .setButtonText('重置')
         .onClick(async () => {
-          config.promptTemplate = this.plugin.settings.defaultPromptTemplate;
+          // 根据设置选择对应的模板
+          if (this.plugin.settings.useCurrentFileNameContext) {
+            // 使用带文件名上下文的模板
+            config.promptTemplate = this.plugin.settings.defaultPromptTemplate;
+          } else {
+            // 使用基础模板
+            config.promptTemplate = BASE_PROMPT_TEMPLATE;
+          }
           await this.plugin.saveSettings();
           this.display();
         }));
@@ -239,15 +440,29 @@ export class AIFileNamerSettingTab extends PluginSettingTab {
           await this.plugin.saveSettings();
         }));
 
-    // 重命名前确认
+    // 调试模式
     new Setting(containerEl)
-      .setName('重命名前确认')
-      .setDesc('在重命名文件前显示确认对话框')
+      .setName('调试模式')
+      .setDesc('开启后在浏览器控制台显示详细的调试日志（包括 Prompt 内容、目录分析结果等）')
       .addToggle(toggle => toggle
-        .setValue(this.plugin.settings.confirmBeforeRename)
+        .setValue(this.plugin.settings.debugMode)
         .onChange(async (value) => {
-          this.plugin.settings.confirmBeforeRename = value;
           await this.plugin.saveSettings();
+        }));
+
+    // 请求超时
+    new Setting(containerEl)
+      .setName('请求超时时间 (秒)')
+      .setDesc('设置 API 请求的最大等待时间，防止请求由于网络原因卡死')
+      .addText(text => text
+        .setPlaceholder('15')
+        .setValue(String((this.plugin.settings.timeout || 15000) / 1000))
+        .onChange(async (value) => {
+          const numValue = parseInt(value);
+          if (!isNaN(numValue) && numValue > 0) {
+            this.plugin.settings.timeout = numValue * 1000;
+            await this.plugin.saveSettings();
+          }
         }));
   }
 
@@ -300,10 +515,30 @@ export class AIFileNamerSettingTab extends PluginSettingTab {
     const hasPath = commonPaths.some(path => normalized.includes(path));
 
     if (!hasPath) {
-      // 尝试检测基础 URL
+      // 尝试检测基础 URL 并自动补全
       const urlObj = this.tryParseUrl(normalized);
-      if (urlObj && (!urlObj.pathname || urlObj.pathname === '/')) {
-        suggestions.push('建议添加完整路径，如：/v1/chat/completions');
+      if (urlObj) {
+        const pathname = urlObj.pathname;
+
+        // 如果路径以 /v1 结尾，自动补全为 /v1/chat/completions
+        if (pathname === '/v1' || pathname === '/v1/') {
+          normalized = normalized + '/chat/completions';
+          suggestions.push('已自动补全为 /v1/chat/completions');
+        }
+        // 如果只有根路径或空路径，补全为 /v1/chat/completions
+        else if (!pathname || pathname === '/') {
+          normalized = normalized + '/v1/chat/completions';
+          suggestions.push('已自动补全为 /v1/chat/completions');
+        }
+        // 如果路径以 /chat 结尾，补全为 /chat/completions
+        else if (pathname === '/chat' || pathname === '/chat/') {
+          normalized = normalized + '/completions';
+          suggestions.push('已自动补全为 /chat/completions');
+        }
+        // 其他情况，只提示建议
+        else {
+          suggestions.push('建议使用完整路径，如：/v1/chat/completions');
+        }
       }
     }
 

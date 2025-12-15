@@ -33,21 +33,45 @@ export class FileNameService {
     // 根据配置决定是否分析目录命名风格
     let directoryNamingStyle: string | undefined = undefined;
     if (this.settings.analyzeDirectoryNamingStyle) {
+      if (this.settings.debugMode) {
+        console.log('[FileNameService] 开始分析目录命名风格...');
+      }
       try {
-        directoryNamingStyle = await this.fileAnalyzer.analyzeDirectoryNamingStyle(file);
+        directoryNamingStyle = await this.fileAnalyzer.analyzeDirectoryNamingStyle(file, this.settings.debugMode);
+        if (this.settings.debugMode) {
+          console.log('[FileNameService] 目录命名风格分析完成:', directoryNamingStyle || '(空)');
+        }
       } catch (error) {
-        console.warn('分析目录命名风格失败:', error);
+        console.warn('[FileNameService] 分析目录命名风格失败:', error);
         // 继续执行，不阻塞主流程
+      }
+    } else {
+      if (this.settings.debugMode) {
+        console.log('[FileNameService] 目录命名风格分析已禁用');
       }
     }
 
     // 调用 AI 服务生成新文件名
+    if (this.settings.debugMode) {
+      console.log('[FileNameService] 调用 AI 服务生成文件名...');
+      console.log('[FileNameService] 参数:', {
+        contentLength: content.length,
+        currentFileName,
+        hasDirectoryStyle: !!directoryNamingStyle,
+        configId
+      });
+    }
+
     const newFileName = await this.aiService.generateFileName(
       content,
       currentFileName,
       directoryNamingStyle,
       configId
     );
+
+    if (this.settings.debugMode) {
+      console.log('[FileNameService] AI 生成的文件名:', newFileName);
+    }
 
     // 验证和清理文件名
     const sanitizedFileName = this.sanitizeFileName(newFileName);

@@ -1,0 +1,108 @@
+/* Obsidian AI File Namer Styles */
+
+/* Floating Button Styles */
+.ai-title-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    margin-right: 8px;
+    /* Space between button and title text */
+    border-radius: 4px;
+    cursor: pointer;
+    opacity: 0;
+    /* Hidden by default */
+    transition: all 0.2s ease;
+    color: var(--text-muted);
+    vertical-align: middle;
+    /* Align with text */
+    user-select: none;
+    /* Prevent selection */
+    z-index: 10;
+
+    /* Ensure it doesn't mess up line height too much */
+    position: relative;
+    top: -1px;
+}
+
+.ai-title-button:hover {
+    color: var(--text-normal);
+    background-color: var(--background-modifier-hover);
+    transform: scale(1.1);
+}
+
+/* Visibility rules */
+.inline-title:hover .ai-title-button,
+.ai-title-button:hover,
+.ai-title-button.generating {
+    opacity: 1;
+}
+
+/* Animation for the title text effect - Shimmer effect */
+@keyframes ai-shimmer {
+    0% {
+        background-position: -200% 0;
+    }
+
+    100% {
+        background-position: 200% 0;
+    }
+}
+
+.ai-generating-title {
+    background: linear-gradient(90deg,
+            var(--text-normal) 0%,
+            var(--interactive-accent) 25%,
+            var(--interactive-accent-hover) 50%,
+            var(--interactive-accent) 75%,
+            var(--text-normal) 100%);
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent !important;
+    animation: ai-shimmer 2s linear infinite;
+}
+
+/* Styling for the button when generating - Pulse and Spin */
+.ai-title-button.generating {
+    color: var(--interactive-accent);
+    animation: ai-pulse-scale 1.5s infinite;
+    pointer-events: none;
+    /* Prevent clicking while generating */
+}
+
+.ai-title-button.generating svg {
+    animation: ai-spin 1s linear infinite;
+}
+
+@keyframes ai-spin {
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes ai-pulse-scale {
+    0% {
+        transform: scale(1);
+        opacity: 1;
+    }
+
+    50% {
+        transform: scale(1.1);
+        opacity: 0.8;
+    }
+
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+/* Fallback if background-clip not supported */
+@supports not (background-clip: text) {
+    .ai-generating-title {
+        color: var(--interactive-accent) !important;
+        text-shadow: 0 0 10px var(--interactive-accent);
+    }
+}

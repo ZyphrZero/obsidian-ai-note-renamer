@@ -1,7 +1,7 @@
 {
-  "name": "obsidian-ai-file-namer",
+  "name": "obsidian-ai-note-renamer",
   "version": "1.0.0",
-  "description": "使用 AI 自动生成 Obsidian 笔记文件名",
+  "description": "使用 AI 自动为笔记生成准确、简洁的文件名",
   "main": "main.js",
   "scripts": {
     "dev": "node esbuild.config.mjs",
