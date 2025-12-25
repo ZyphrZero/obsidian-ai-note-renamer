@@ -204,6 +204,7 @@ class DeleteConfigModal extends Modal {
 export class AIFileNamerSettingTab extends PluginSettingTab {
   plugin: AIFileNamerPlugin;
   private activeTab = 'general';
+  private expandedSections: Set<string> = new Set(); // 记录展开的功能区块
 
   constructor(app: App, plugin: AIFileNamerPlugin) {
     super(app, plugin);
@@ -1155,14 +1156,15 @@ export class AIFileNamerSettingTab extends PluginSettingTab {
    * 渲染高级设置
    */
   private renderAdvancedSettings(containerEl: HTMLElement): void {
-    const advancedCard = this.createSettingCard(containerEl);
+    // 性能与调试设置
+    const performanceCard = this.createSettingCard(containerEl);
 
-    new Setting(advancedCard)
-      .setName('高级选项')
+    new Setting(performanceCard)
+      .setName('性能与调试')
       .setHeading();
 
     // 请求超时
-    new Setting(advancedCard)
+    new Setting(performanceCard)
       .setName('请求超时时间 (秒)')
       .setDesc('设置 API 请求的最大等待时间，防止请求由于网络原因卡死')
       .addText(text => text
@@ -1177,7 +1179,7 @@ export class AIFileNamerSettingTab extends PluginSettingTab {
         }));
 
     // 调试模式
-    new Setting(advancedCard)
+    new Setting(performanceCard)
       .setName('调试模式')
       .setDesc('开启后在浏览器控制台显示详细的调试日志（包括 Prompt 内容、目录分析结果等）')
       .addToggle(toggle => toggle
@@ -1186,6 +1188,163 @@ export class AIFileNamerSettingTab extends PluginSettingTab {
           this.plugin.settings.debugMode = value;
           await this.plugin.saveSettings();
         }));
+
+    // 功能显示管理
+    const visibilityCard = this.createSettingCard(containerEl);
+
+    new Setting(visibilityCard)
+      .setName('功能显示管理')
+      .setDesc('控制插件功能在不同位置的显示，自定义你的工作流。修改后需要重新加载插件才能生效。')
+      .setHeading();
+
+    // AI 文件名生成功能 - 可折叠区块
+    this.createCollapsibleSection(
+      visibilityCard,
+      'aiNaming',
+      'AI 文件名生成',
+      '点击展开，配置 AI 文件名生成功能的显示位置',
+      (contentEl) => {
+        new Setting(contentEl)
+          .setName('命令面板')
+          .setDesc('在命令面板（Ctrl/Cmd+P）中显示"生成 AI 文件名"命令')
+          .addToggle(toggle => toggle
+            .setValue(this.plugin.settings.featureVisibility.aiNaming.showInCommandPalette)
+            .onChange(async (value) => {
+              this.plugin.settings.featureVisibility.aiNaming.showInCommandPalette = value;
+              await this.plugin.saveSettings();
+            }));
+
+        new Setting(contentEl)
+          .setName('编辑器右键菜单')
+          .setDesc('在编辑器右键菜单中显示"生成 AI 文件名"选项')
+          .addToggle(toggle => toggle
+            .setValue(this.plugin.settings.featureVisibility.aiNaming.showInEditorMenu)
+            .onChange(async (value) => {
+              this.plugin.settings.featureVisibility.aiNaming.showInEditorMenu = value;
+              await this.plugin.saveSettings();
+            }));
+
+        new Setting(contentEl)
+          .setName('文件浏览器右键菜单')
+          .setDesc('在文件浏览器右键菜单中显示"生成 AI 文件名"选项')
+          .addToggle(toggle => toggle
+            .setValue(this.plugin.settings.featureVisibility.aiNaming.showInFileMenu)
+            .onChange(async (value) => {
+              this.plugin.settings.featureVisibility.aiNaming.showInFileMenu = value;
+              await this.plugin.saveSettings();
+            }));
+
+        new Setting(contentEl)
+          .setName('侧边栏图标')
+          .setDesc('在左侧边栏显示 AI 文件名生成的快捷图标按钮')
+          .addToggle(toggle => toggle
+            .setValue(this.plugin.settings.featureVisibility.aiNaming.showInRibbon)
+            .onChange(async (value) => {
+              this.plugin.settings.featureVisibility.aiNaming.showInRibbon = value;
+              await this.plugin.saveSettings();
+            }));
+      }
+    );
+
+    // 终端功能 - 可折叠区块
+    this.createCollapsibleSection(
+      visibilityCard,
+      'terminal',
+      '终端',
+      '点击展开，配置终端功能的显示位置',
+      (contentEl) => {
+        new Setting(contentEl)
+          .setName('命令面板')
+          .setDesc('在命令面板（Ctrl/Cmd+P）中显示"打开终端"命令')
+          .addToggle(toggle => toggle
+            .setValue(this.plugin.settings.featureVisibility.terminal.showInCommandPalette)
+            .onChange(async (value) => {
+              this.plugin.settings.featureVisibility.terminal.showInCommandPalette = value;
+              await this.plugin.saveSettings();
+            }));
+
+        new Setting(contentEl)
+          .setName('侧边栏图标')
+          .setDesc('在左侧边栏显示打开终端的快捷图标按钮')
+          .addToggle(toggle => toggle
+            .setValue(this.plugin.settings.featureVisibility.terminal.showInRibbon)
+            .onChange(async (value) => {
+              this.plugin.settings.featureVisibility.terminal.showInRibbon = value;
+              await this.plugin.saveSettings();
+            }));
+      }
+    );
+  }
+
+  /**
+   * 创建可折叠的设置区块
+   * @param containerEl 容器元素
+   * @param sectionId 区块 ID
+   * @param title 标题
+   * @param description 描述
+   * @param renderContent 渲染内容的回调函数
+   */
+  private createCollapsibleSection(
+    containerEl: HTMLElement,
+    sectionId: string,
+    title: string,
+    description: string,
+    renderContent: (contentEl: HTMLElement) => void
+  ): void {
+    const isExpanded = this.expandedSections.has(sectionId);
+
+    // 创建包装容器
+    const wrapperEl = containerEl.createDiv({ cls: 'collapsible-section-wrapper' });
+
+    // 创建标题区域（可点击）
+    const headerEl = wrapperEl.createDiv({ 
+      cls: 'collapsible-section-header' 
+    });
+
+    const headerInfo = headerEl.createDiv({ cls: 'setting-item-info' });
+    
+    const headerName = headerInfo.createDiv({ cls: 'setting-item-name' });
+    
+    // 添加展开/收起图标
+    const iconEl = headerName.createSpan({ cls: 'collapsible-icon' });
+    setIcon(iconEl, isExpanded ? 'chevron-down' : 'chevron-right');
+    
+    headerName.appendText(title);
+    
+    const headerDesc = headerInfo.createDiv({ cls: 'setting-item-description' });
+    headerDesc.setText(description);
+
+    // 创建内容区域
+    const contentEl = wrapperEl.createDiv({ cls: 'collapsible-content' });
+    contentEl.style.display = isExpanded ? 'block' : 'none';
+
+    // 点击标题切换展开/收起
+    headerEl.addEventListener('click', () => {
+      const willExpand = !this.expandedSections.has(sectionId);
+      
+      if (willExpand) {
+        this.expandedSections.add(sectionId);
+        contentEl.style.display = 'block';
+        headerEl.addClass('is-expanded');
+        setIcon(iconEl, 'chevron-down');
+        
+        // 如果内容还未渲染，现在渲染
+        if (contentEl.children.length === 0) {
+          renderContent(contentEl);
+        }
+      } else {
+        this.expandedSections.delete(sectionId);
+        contentEl.style.display = 'none';
+        headerEl.removeClass('is-expanded');
+        setIcon(iconEl, 'chevron-right');
+      }
+    });
+
+    // 设置初始状态
+    if (isExpanded) {
+      headerEl.addClass('is-expanded');
+      renderContent(contentEl);
+    }
   }
 
   /**

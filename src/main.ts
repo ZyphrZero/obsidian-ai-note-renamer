@@ -47,62 +47,74 @@ export default class AIFileNamerPlugin extends Plugin {
     );
 
     // 添加侧边栏图标按钮 - AI 文件名生成
-    this.addRibbonIcon('sparkles', 'AI 文件名生成', async () => {
-      await this.handleGenerateCommand();
-    });
+    if (this.settings.featureVisibility.aiNaming.showInRibbon) {
+      this.addRibbonIcon('sparkles', 'AI 文件名生成', async () => {
+        await this.handleGenerateCommand();
+      });
+    }
 
     // 添加侧边栏图标按钮 - 打开终端
-    this.addRibbonIcon('terminal-square', '打开终端', async () => {
-      await this.activateTerminalView();
-    });
+    if (this.settings.featureVisibility.terminal.showInRibbon) {
+      this.addRibbonIcon('terminal-square', '打开终端', async () => {
+        await this.activateTerminalView();
+      });
+    }
 
-    // 添加命令面板命令
-    this.addCommand({
-      id: 'generate-ai-filename',
-      name: '生成 AI 文件名',
-      callback: async () => {
-        await this.handleGenerateCommand();
-      }
-    });
+    // 添加命令面板命令 - AI 文件名生成
+    if (this.settings.featureVisibility.aiNaming.showInCommandPalette) {
+      this.addCommand({
+        id: 'generate-ai-filename',
+        name: '生成 AI 文件名',
+        callback: async () => {
+          await this.handleGenerateCommand();
+        }
+      });
+    }
 
     // 添加打开终端命令
-    this.addCommand({
-      id: 'open-terminal',
-      name: '打开终端',
-      callback: async () => {
-        await this.activateTerminalView();
-      }
-    });
+    if (this.settings.featureVisibility.terminal.showInCommandPalette) {
+      this.addCommand({
+        id: 'open-terminal',
+        name: '打开终端',
+        callback: async () => {
+          await this.activateTerminalView();
+        }
+      });
+    }
 
     // 添加编辑器右键菜单
-    this.registerEvent(
-      this.app.workspace.on('editor-menu', (menu: Menu, _editor, _view) => {
-        menu.addItem((item) => {
-          item
-            .setTitle('生成 AI 文件名')
-            .setIcon('sparkles')
-            .onClick(async () => {
-              await this.handleGenerateCommand();
-            });
-        });
-      })
-    );
-
-    // 添加文件浏览器右键菜单
-    this.registerEvent(
-      this.app.workspace.on('file-menu', (menu: Menu, file) => {
-        if (file instanceof TFile) {
+    if (this.settings.featureVisibility.aiNaming.showInEditorMenu) {
+      this.registerEvent(
+        this.app.workspace.on('editor-menu', (menu: Menu, _editor, _view) => {
           menu.addItem((item) => {
             item
               .setTitle('生成 AI 文件名')
               .setIcon('sparkles')
               .onClick(async () => {
-                await this.handleGenerateForFile(file);
+                await this.handleGenerateCommand();
               });
           });
-        }
-      })
-    );
+        })
+      );
+    }
+
+    // 添加文件浏览器右键菜单
+    if (this.settings.featureVisibility.aiNaming.showInFileMenu) {
+      this.registerEvent(
+        this.app.workspace.on('file-menu', (menu: Menu, file) => {
+          if (file instanceof TFile) {
+            menu.addItem((item) => {
+              item
+                .setTitle('生成 AI 文件名')
+                .setIcon('sparkles')
+                .onClick(async () => {
+                  await this.handleGenerateForFile(file);
+                });
+            });
+          }
+        })
+      );
+    }
 
     // 添加设置标签页
     this.addSettingTab(new AIFileNamerSettingTab(this.app, this));
@@ -255,6 +267,23 @@ export default class AIFileNamerPlugin extends Plugin {
       this.settings.terminal = {
         ...DEFAULT_SETTINGS.terminal,
         ...this.settings.terminal
+      };
+    }
+
+    // 确保功能显示设置完整（深度合并）
+    if (!this.settings.featureVisibility) {
+      this.settings.featureVisibility = { ...DEFAULT_SETTINGS.featureVisibility };
+    } else {
+      // 合并功能显示设置，确保所有字段都存在
+      this.settings.featureVisibility = {
+        aiNaming: {
+          ...DEFAULT_SETTINGS.featureVisibility.aiNaming,
+          ...(this.settings.featureVisibility.aiNaming || {})
+        },
+        terminal: {
+          ...DEFAULT_SETTINGS.featureVisibility.terminal,
+          ...(this.settings.featureVisibility.terminal || {})
+        }
       };
     }
 

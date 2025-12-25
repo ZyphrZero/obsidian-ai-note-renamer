@@ -491,3 +491,140 @@
 .xterm-link-layer {
     contain: strict;
 }
+
+/* ==================== 可折叠区块样式 ==================== */
+
+/* 可折叠区块包装容器 */
+.collapsible-section-wrapper {
+    margin-bottom: 16px;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 8px;
+    overflow: hidden;
+    background-color: var(--background-primary);
+    transition: all 0.2s ease;
+}
+
+.collapsible-section-wrapper:hover {
+    border-color: var(--background-modifier-border-hover);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+/* 可折叠区块标题 */
+.collapsible-section-header {
+    display: flex;
+    align-items: center;
+    padding: 12px 16px;
+    cursor: pointer;
+    user-select: none;
+    background-color: var(--background-secondary);
+    transition: all 0.2s ease;
+    border-bottom: 1px solid transparent;
+}
+
+.collapsible-section-header:hover {
+    background-color: var(--background-modifier-hover);
+}
+
+.collapsible-section-header.is-expanded {
+    border-bottom-color: var(--background-modifier-border);
+}
+
+/* 标题信息区域 */
+.collapsible-section-header .setting-item-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+/* 标题名称 */
+.collapsible-section-header .setting-item-name {
+    display: flex;
+    align-items: center;
+    font-weight: 500;
+    color: var(--text-normal);
+    font-size: 14px;
+}
+
+/* 标题描述 */
+.collapsible-section-header .setting-item-description {
+    color: var(--text-muted);
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+/* 折叠图标 */
+.collapsible-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    margin-right: 8px;
+    color: var(--text-muted);
+    transition: transform 0.2s ease, color 0.2s ease;
+}
+
+.collapsible-section-header:hover .collapsible-icon {
+    color: var(--text-normal);
+}
+
+.collapsible-section-header.is-expanded .collapsible-icon {
+    color: var(--interactive-accent);
+}
+
+/* 可折叠内容区域 */
+.collapsible-content {
+    padding: 0;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+/* 折叠内容的设置项 */
+.collapsible-content .setting-item {
+    padding: 12px 16px;
+    margin: 0;
+    border-bottom: 1px solid var(--background-modifier-border);
+    background-color: var(--background-primary);
+    transition: background-color 0.2s ease;
+}
+
+.collapsible-content .setting-item:last-child {
+    border-bottom: none;
+}
+
+.collapsible-content .setting-item:hover {
+    background-color: var(--background-secondary-alt);
+}
+
+/* 折叠内容设置项的名称 */
+.collapsible-content .setting-item .setting-item-name {
+    font-size: 13px;
+    font-weight: 500;
+}
+
+/* 折叠内容设置项的描述 */
+.collapsible-content .setting-item .setting-item-description {
+    font-size: 12px;
+    color: var(--text-muted);
+    line-height: 1.4;
+}
+
+/* 响应式优化 */
+@media screen and (max-width: 768px) {
+    .collapsible-section-header {
+        padding: 10px 12px;
+    }
+    
+    .collapsible-content .setting-item {
+        padding: 10px 12px;
+    }
+    
+    .collapsible-section-header .setting-item-name {
+        font-size: 13px;
+    }
+    
+    .collapsible-section-header .setting-item-description {
+        font-size: 11px;
+    }
+}

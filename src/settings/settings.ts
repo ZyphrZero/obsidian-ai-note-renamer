@@ -91,6 +91,24 @@ export interface TerminalSettings {
 }
 
 /**
+ * 功能显示设置接口
+ */
+export interface FeatureVisibilitySettings {
+  // AI 文件名生成功能
+  aiNaming: {
+    showInCommandPalette: boolean;    // 命令面板
+    showInEditorMenu: boolean;        // 编辑器右键菜单
+    showInFileMenu: boolean;          // 文件浏览器右键菜单
+    showInRibbon: boolean;            // 侧边栏图标
+  };
+  // 终端功能
+  terminal: {
+    showInCommandPalette: boolean;    // 命令面板
+    showInRibbon: boolean;            // 侧边栏图标
+  };
+}
+
+/**
  * 插件设置接口
  */
 export interface AIFileNamerSettings {
@@ -102,6 +120,7 @@ export interface AIFileNamerSettings {
   debugMode: boolean;            // 调试模式（在控制台显示详细日志）
   timeout: number;               // 请求超时时间（毫秒）
   terminal: TerminalSettings;    // 终端设置
+  featureVisibility: FeatureVisibilitySettings; // 功能显示设置
 }
 
 /**
@@ -179,6 +198,22 @@ export const DEFAULT_TERMINAL_SETTINGS: TerminalSettings = {
 };
 
 /**
+ * 默认功能显示设置
+ */
+export const DEFAULT_FEATURE_VISIBILITY: FeatureVisibilitySettings = {
+  aiNaming: {
+    showInCommandPalette: true,
+    showInEditorMenu: true,
+    showInFileMenu: true,
+    showInRibbon: true
+  },
+  terminal: {
+    showInCommandPalette: true,
+    showInRibbon: true
+  }
+};
+
+/**
  * 默认设置
  */
 export const DEFAULT_SETTINGS: AIFileNamerSettings = {
@@ -201,5 +236,6 @@ export const DEFAULT_SETTINGS: AIFileNamerSettings = {
   analyzeDirectoryNamingStyle: false, // 默认不分析目录命名风格（性能考虑）
   debugMode: false, // 默认关闭调试模式
   timeout: 15000, // 默认超时时间 15 秒
-  terminal: DEFAULT_TERMINAL_SETTINGS // 终端默认设置
+  terminal: DEFAULT_TERMINAL_SETTINGS, // 终端默认设置
+  featureVisibility: DEFAULT_FEATURE_VISIBILITY // 功能显示默认设置
 };
