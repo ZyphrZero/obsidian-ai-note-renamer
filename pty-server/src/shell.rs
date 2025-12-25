@@ -6,11 +6,19 @@ pub fn get_shell_by_type(shell_type: Option<&str>) -> CommandBuilder {
     match shell_type {
         Some("cmd") => CommandBuilder::new("cmd.exe"),
         Some("powershell") => {
-            // 优先使用 PowerShell Core (pwsh)，回退到 Windows PowerShell
-            if let Ok(pwsh_path) = which_powershell() {
-                CommandBuilder::new(pwsh_path)
-            } else {
-                CommandBuilder::new("powershell.exe")
+            #[cfg(windows)]
+            {
+                // 优先使用 PowerShell Core (pwsh)，回退到 Windows PowerShell
+                if let Ok(pwsh_path) = which_powershell() {
+                    CommandBuilder::new(pwsh_path)
+                } else {
+                    CommandBuilder::new("powershell.exe")
+                }
+            }
+            #[cfg(not(windows))]
+            {
+                // 非 Windows 平台，使用默认 shell
+                get_default_shell()
             }
         }
         Some("wsl") => CommandBuilder::new("wsl.exe"),

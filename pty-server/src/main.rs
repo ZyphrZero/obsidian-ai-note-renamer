@@ -27,12 +27,6 @@ macro_rules! log_info {
     };
 }
 
-macro_rules! log_error {
-    ($($arg:tt)*) => {
-        eprintln!("[ERROR] {}", format!($($arg)*));
-    };
-}
-
 macro_rules! log_debug {
     ($($arg:tt)*) => {
         if cfg!(debug_assertions) {
