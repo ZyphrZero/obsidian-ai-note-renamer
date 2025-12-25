@@ -75,10 +75,11 @@ Enter **Settings > General**:
 *   **API Key**: Enter your key.
 *   **Model**: Enter the model name (e.g., `gpt-4o`, `deepseek-chat`).
 *   Click **"Test Connection"** to ensure the configuration is correct.
+*   **Timeout Settings**: You can appropriately increase the timeout period when the network is slow.
 
 ### 2. Generate File Name
 You can trigger it in any of the following ways:
-*   **✨ Title Hover Button**: Hover over the title of the note (Inline Title) area, click the star icon that appears.
+*   ~~**✨ Title Hover Button**: Hover over the title of the note (Inline Title) area, click the star icon that appears. (No suitable implementation method available yet)~~
 *   **Command Palette**: `Ctrl/Cmd + P` input "Generate AI File Name".
 *   **Right-click Menu**: Right-click in the file list or editor area.
 
@@ -103,7 +104,6 @@ Note content:
 *   **Use Current Filename as Context**: When enabled, the AI will know the current filename, allowing you to ask it to "optimize" the existing name instead of regenerating it.
 *   **Analyze Directory Naming Style**: (Experimental) Attempts to analyze the naming habits of other files in the same directory.
 *   **Debug Mode**: Output the full Prompt and API response in the developer console (Ctrl+Shift+I) for troubleshooting.
-*   **Timeout Settings**: You can appropriately increase the timeout period when the network is slow.
 
 ### Terminal Settings
 *   **Shell Configuration**:
@@ -116,7 +116,6 @@ Note content:
 *   **Behavior Settings**:
     *   **Scrollback Buffer**: Set terminal history lines (100-10000), default 1000 lines.
     *   **Panel Height**: Set terminal panel default height (100-1000 pixels), default 300 pixels.
-    *   **Restore on Startup**: When enabled, automatically restore previously opened terminal instances on plugin load.
 
 ## 🧩 FAQ
 
