@@ -214,7 +214,7 @@ if (createZip) {
     // 检查是否安装了 zip 命令
     execSync('zip --version', { stdio: 'pipe' });
     
-    const zipName = `obsidian-terminal-plugin.zip`;
+    const zipName = `obsidian-smart-workflow.zip`;
     const zipPath = path.join(ROOT_DIR, zipName);
     
     // 删除旧的 ZIP 文件

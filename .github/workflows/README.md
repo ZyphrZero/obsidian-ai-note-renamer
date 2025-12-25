@@ -66,7 +66,7 @@
 - 创建 GitHub Release 并上传文件
 
 **Release 包含的文件:**
-- `obsidian-terminal-plugin.zip` - 完整插件包（推荐）
+- `obsidian-smart-workflow.zip` - 完整插件包（推荐）
 - `main.js`, `manifest.json`, `styles.css` - 核心文件
 - 5 个平台的二进制文件及其 SHA256 校验和
 
