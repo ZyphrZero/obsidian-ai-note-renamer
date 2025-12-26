@@ -11,7 +11,7 @@
 import { App, Notice } from 'obsidian';
 import { spawn, ChildProcess } from 'child_process';
 import { BinaryManager, BinaryManagerError, BinaryErrorCode } from './binaryManager';
-import { TerminalSettings } from '../../settings/settings';
+import { TerminalSettings, getCurrentPlatformShell, getCurrentPlatformCustomShellPath } from '../../settings/settings';
 import { TerminalInstance } from './terminalInstance';
 import { debugLog, debugWarn, errorLog } from '../../utils/logger';
 import { t } from '../../i18n';
@@ -318,9 +318,13 @@ export class TerminalService {
       }
       
       // 处理自定义 shell 路径
-      let shellType: string = this.settings.defaultShell;
-      if (shellType === 'custom' && this.settings.customShellPath) {
-        shellType = `custom:${this.settings.customShellPath}`;
+      const currentShell = getCurrentPlatformShell(this.settings);
+      let shellType: string = currentShell;
+      if (currentShell === 'custom') {
+        const customPath = getCurrentPlatformCustomShellPath(this.settings);
+        if (customPath) {
+          shellType = `custom:${customPath}`;
+        }
       }
       
       // 获取 shell 启动参数

@@ -415,7 +415,15 @@ export default class SmartWorkflowPlugin extends Plugin {
       // 合并终端设置，确保所有字段都存在
       this.settings.terminal = {
         ...DEFAULT_SETTINGS.terminal,
-        ...this.settings.terminal
+        ...this.settings.terminal,
+        platformShells: {
+          ...DEFAULT_SETTINGS.terminal.platformShells,
+          ...(this.settings.terminal.platformShells || {})
+        },
+        platformCustomShellPaths: {
+          ...DEFAULT_SETTINGS.terminal.platformCustomShellPaths,
+          ...(this.settings.terminal.platformCustomShellPaths || {})
+        }
       };
     }
 

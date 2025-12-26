@@ -1,6 +1,6 @@
 import { App, PluginSettingTab, Setting, Modal, Notice, setIcon } from 'obsidian';
 import type SmartWorkflowPlugin from '../main';
-import { BASE_PROMPT_TEMPLATE, ADVANCED_PROMPT_TEMPLATE } from './settings';
+import { BASE_PROMPT_TEMPLATE, ADVANCED_PROMPT_TEMPLATE, getCurrentPlatformShell, setCurrentPlatformShell, getCurrentPlatformCustomShellPath, setCurrentPlatformCustomShellPath, ShellType } from './settings';
 import { validateShellPath } from '../services/terminal/platformUtils';
 import { t } from '../i18n';
 
@@ -705,6 +705,8 @@ export class SmartWorkflowSettingTab extends PluginSettingTab {
       .setHeading();
 
     // 默认 Shell 程序选择
+    const currentShell = getCurrentPlatformShell(this.plugin.settings.terminal);
+    
     new Setting(shellCard)
       .setName(t('settingsDetails.terminal.defaultShell'))
       .setDesc(t('settingsDetails.terminal.defaultShellDesc'))
@@ -721,25 +723,27 @@ export class SmartWorkflowSettingTab extends PluginSettingTab {
         }
         dropdown.addOption('custom', t('shellOptions.custom'));
 
-        dropdown.setValue(this.plugin.settings.terminal.defaultShell);
+        dropdown.setValue(currentShell);
         dropdown.onChange(async (value) => {
-          this.plugin.settings.terminal.defaultShell = value as any;
+          setCurrentPlatformShell(this.plugin.settings.terminal, value as ShellType);
           await this.plugin.saveSettings();
           this.display(); // 重新渲染以显示/隐藏自定义路径输入框
         });
       });
 
     // 自定义程序路径（仅在选择 custom 时显示）
-    if (this.plugin.settings.terminal.defaultShell === 'custom') {
+    if (currentShell === 'custom') {
+      const currentCustomPath = getCurrentPlatformCustomShellPath(this.plugin.settings.terminal);
+      
       new Setting(shellCard)
         .setName(t('settingsDetails.terminal.customShellPath'))
         .setDesc(t('settingsDetails.terminal.customShellPathDesc'))
         .addText(text => {
           text
             .setPlaceholder(t('settingsDetails.terminal.customShellPathPlaceholder'))
-            .setValue(this.plugin.settings.terminal.customShellPath)
+            .setValue(currentCustomPath)
             .onChange(async (value) => {
-              this.plugin.settings.terminal.customShellPath = value;
+              setCurrentPlatformCustomShellPath(this.plugin.settings.terminal, value);
               await this.plugin.saveSettings();
               
               // 验证路径
@@ -748,7 +752,7 @@ export class SmartWorkflowSettingTab extends PluginSettingTab {
           
           // 初始验证
           setTimeout(() => {
-            this.validateCustomShellPath(shellCard, this.plugin.settings.terminal.customShellPath);
+            this.validateCustomShellPath(shellCard, currentCustomPath);
           }, 0);
           
           return text;

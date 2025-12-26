@@ -1291,6 +1291,15 @@ export class TerminalInstance {
       return;
     }
     
+    // WSL prompt: user@host:/mnt/x/path$ 或包含路径的行
+    // 匹配 /mnt/x/... 格式的 WSL 路径
+    const wslPathMatch = cleanData.match(/(?:^|:|\s)(\/mnt\/[a-zA-Z]\/[^\s$#>\r\n]*)/m);
+    if (wslPathMatch) {
+      this.currentCwd = wslPathMatch[1].trimEnd();
+      debugLog('[Terminal CWD] WSL path matched:', this.currentCwd);
+      return;
+    }
+    
     // 如果包含 prompt 特征但未匹配，记录原始数据供调试
     // 检测常见 prompt 结束符: $, #, >, %
     if (/[$#>%]\s*$/.test(cleanData) && cleanData.length < 500) {
@@ -1345,45 +1354,62 @@ export class TerminalInstance {
   }
 
   /**
+   * 将 WSL 路径转换为 Windows 路径
+   * @param wslPath WSL 格式的路径 (如 /mnt/c/Users/...)
+   * @returns Windows 格式的路径 (如 C:\Users\...)
+   */
+  private convertWslPathToWindows(wslPath: string): string {
+    // 匹配 /mnt/x/... 格式的路径
+    const wslMountMatch = wslPath.match(/^\/mnt\/([a-zA-Z])\/(.*)$/);
+    if (wslMountMatch) {
+      const driveLetter = wslMountMatch[1].toUpperCase();
+      const restPath = wslMountMatch[2].replace(/\//g, '\\');
+      return `${driveLetter}:\\${restPath}`;
+    }
+    return wslPath;
+  }
+
+  /**
    * 在文件管理器中打开指定路径
    * @param path 要打开的路径
    */
   private openInFileManager(path: string): void {
     const currentPlatform = platform();
+    const { exec } = require('child_process');
+    
+    debugLog('[Terminal] Opening in file manager, original path:', path);
+    
+    let targetPath = path;
+    
+    // 如果是 WSL 终端，需要将 WSL 路径转换为 Windows 路径
+    if (currentPlatform === 'win32' && this.shellType === 'wsl' && path.startsWith('/mnt/')) {
+      targetPath = this.convertWslPathToWindows(path);
+      debugLog('[Terminal] Converted WSL path to Windows path:', { original: path, converted: targetPath });
+    }
+    
+    debugLog('[Terminal] Final path for file manager:', targetPath);
     
     if (currentPlatform === 'win32') {
-      // Windows: 使用 explorer 命令打开并选中文件夹
-      // /select 参数会打开父文件夹并选中指定项
-      // 如果路径是文件夹,则直接打开该文件夹
-      const { exec } = require('child_process');
-      exec(`explorer "${path}"`, (error: Error | null) => {
-        if (error) {
-          errorLog('[Terminal] Failed to open in explorer:', error);
-          // 降级方案: 使用 shell.openPath
-          shell.openPath(path);
-        }
-      });
+      // Windows: 使用 explorer 命令，会前台打开窗口
+      // 注意: explorer 即使成功也可能返回非零退出码，忽略错误
+      exec(`explorer "${targetPath}"`);
     } else if (currentPlatform === 'darwin') {
       // macOS: 使用 open 命令
-      const { exec } = require('child_process');
-      exec(`open "${path}"`, (error: Error | null) => {
+      exec(`open "${targetPath}"`, (error: Error | null) => {
         if (error) {
           errorLog('[Terminal] Failed to open in Finder:', error);
-          shell.openPath(path);
+          shell.openPath(targetPath);
         }
       });
     } else {
       // Linux: 使用 xdg-open
-      const { exec } = require('child_process');
-      exec(`xdg-open "${path}"`, (error: Error | null) => {
+      exec(`xdg-open "${targetPath}"`, (error: Error | null) => {
         if (error) {
           errorLog('[Terminal] Failed to open in file manager:', error);
-          shell.openPath(path);
+          shell.openPath(targetPath);
         }
       });
     }
-    
-    debugLog('[Terminal] Opening in file manager:', path);
   }
 
   /**

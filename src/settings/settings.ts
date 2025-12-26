@@ -13,15 +13,42 @@ export interface APIConfig {
   promptTemplate: string;        // Prompt 模板
 }
 
+/** Windows 平台支持的 Shell 类型 */
+export type WindowsShellType = 'cmd' | 'powershell' | 'wsl' | 'gitbash' | 'custom';
+
+/** Unix 平台（macOS/Linux）支持的 Shell 类型 */
+export type UnixShellType = 'bash' | 'zsh' | 'custom';
+
+/** 所有 Shell 类型的联合 */
+export type ShellType = WindowsShellType | UnixShellType;
+
+/**
+ * 平台特定的 Shell 配置
+ */
+export interface PlatformShellConfig {
+  windows: WindowsShellType;
+  darwin: UnixShellType;  // macOS
+  linux: UnixShellType;
+}
+
+/**
+ * 平台特定的自定义 Shell 路径
+ */
+export interface PlatformCustomShellPaths {
+  windows: string;
+  darwin: string;
+  linux: string;
+}
+
 /**
  * 终端设置接口
  */
 export interface TerminalSettings {
-  // 默认 Shell 程序类型
-  defaultShell: 'cmd' | 'powershell' | 'wsl' | 'gitbash' | 'bash' | 'zsh' | 'custom';
+  // 各平台的默认 Shell 程序类型（独立存储）
+  platformShells: PlatformShellConfig;
 
-  // 自定义程序路径（当 defaultShell 为 'custom' 时使用）
-  customShellPath: string;
+  // 各平台的自定义 Shell 路径（独立存储）
+  platformCustomShellPaths: PlatformCustomShellPaths;
 
   // 默认启动参数
   shellArgs: string[];
@@ -157,11 +184,91 @@ Requirements:
 6. Do not wrap the filename with quotes, angle brackets, or other symbols`;
 
 /**
+ * 默认平台 Shell 配置
+ */
+export const DEFAULT_PLATFORM_SHELLS: PlatformShellConfig = {
+  windows: 'powershell',
+  darwin: 'zsh',
+  linux: 'bash'
+};
+
+/**
+ * 默认平台自定义 Shell 路径
+ */
+export const DEFAULT_PLATFORM_CUSTOM_SHELL_PATHS: PlatformCustomShellPaths = {
+  windows: '',
+  darwin: '',
+  linux: ''
+};
+
+/**
+ * 获取当前平台的 Shell 类型
+ */
+export function getCurrentPlatformShell(settings: TerminalSettings): ShellType {
+  const platform = process.platform;
+  if (platform === 'win32') {
+    return settings.platformShells.windows;
+  } else if (platform === 'darwin') {
+    return settings.platformShells.darwin;
+  } else {
+    return settings.platformShells.linux;
+  }
+}
+
+/**
+ * 设置当前平台的 Shell 类型
+ */
+export function setCurrentPlatformShell(
+  settings: TerminalSettings,
+  shell: ShellType
+): void {
+  const platform = process.platform;
+  if (platform === 'win32') {
+    settings.platformShells.windows = shell as WindowsShellType;
+  } else if (platform === 'darwin') {
+    settings.platformShells.darwin = shell as UnixShellType;
+  } else {
+    settings.platformShells.linux = shell as UnixShellType;
+  }
+}
+
+/**
+ * 获取当前平台的自定义 Shell 路径
+ */
+export function getCurrentPlatformCustomShellPath(settings: TerminalSettings): string {
+  const platform = process.platform;
+  if (platform === 'win32') {
+    return settings.platformCustomShellPaths.windows;
+  } else if (platform === 'darwin') {
+    return settings.platformCustomShellPaths.darwin;
+  } else {
+    return settings.platformCustomShellPaths.linux;
+  }
+}
+
+/**
+ * 设置当前平台的自定义 Shell 路径
+ */
+export function setCurrentPlatformCustomShellPath(
+  settings: TerminalSettings,
+  path: string
+): void {
+  const platform = process.platform;
+  if (platform === 'win32') {
+    settings.platformCustomShellPaths.windows = path;
+  } else if (platform === 'darwin') {
+    settings.platformCustomShellPaths.darwin = path;
+  } else {
+    settings.platformCustomShellPaths.linux = path;
+  }
+}
+
+/**
  * 默认终端设置
  */
 export const DEFAULT_TERMINAL_SETTINGS: TerminalSettings = {
-  defaultShell: process.platform === 'win32' ? 'powershell' : 'bash',
-  customShellPath: '',
+  platformShells: { ...DEFAULT_PLATFORM_SHELLS },
+  platformCustomShellPaths: { ...DEFAULT_PLATFORM_CUSTOM_SHELL_PATHS },
   shellArgs: [],
   autoEnterVaultDirectory: true,
   newInstanceBehavior: 'newHorizontalSplit',
