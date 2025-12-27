@@ -1,34 +1,34 @@
-// Shell 检测和配置
+// Shell Detection and Configuration
 use portable_pty::CommandBuilder;
 
-/// Shell Integration 脚本（通过 PTY 注入）
-/// 使用空格前缀让命令不进入历史记录，使用重定向隐藏输出
-/// 注意：bash/zsh 默认配置下，以空格开头的命令不会记录到历史
-/// 仅在 Unix 平台使用，Windows 平台依赖前端 prompt 解析
+/// Shell Integration scripts (injected via PTY)
+/// Use space prefix to prevent command from entering history, use redirect to hide output
+/// Note: bash/zsh default config doesn't record commands starting with space
+/// Only used on Unix platforms, Windows relies on frontend prompt parsing
 
-// Bash: 定义函数并设置 PROMPT_COMMAND，静默执行
+// Bash: Define function and set PROMPT_COMMAND, execute silently
 #[cfg(not(windows))]
 const SHELL_INTEGRATION_BASH: &str = " eval '__sw_cwd(){ printf \"\\e]7;file://%s%s\\e\\\\\" \"${HOSTNAME:-localhost}\" \"$PWD\";};PROMPT_COMMAND=\"__sw_cwd${PROMPT_COMMAND:+;$PROMPT_COMMAND}\"' 2>/dev/null;__sw_cwd;printf '\\ec'\n";
 
-// Zsh: 使用 precmd hook，静默执行
+// Zsh: Use precmd hook, execute silently
 #[cfg(not(windows))]
 const SHELL_INTEGRATION_ZSH: &str = " eval '__sw_cwd(){ printf \"\\e]7;file://%s%s\\e\\\\\" \"${HOST:-localhost}\" \"$PWD\";};autoload -Uz add-zsh-hook;add-zsh-hook precmd __sw_cwd;add-zsh-hook chpwd __sw_cwd' 2>/dev/null;__sw_cwd;printf '\\ec'\n";
 
-// Fish: 使用事件监听
+// Fish: Use event listener
 #[cfg(not(windows))]
 const SHELL_INTEGRATION_FISH: &str = " eval 'function __sw_cwd --on-variable PWD; printf \"\\e]7;file://%s%s\\e\\\\\" (hostname) $PWD; end' 2>/dev/null;__sw_cwd;printf '\\ec'\n";
 
-/// 获取 shell integration 脚本
-/// 注意：Windows 平台所有 shells 都不使用 Shell Integration，依赖前端 prompt 解析
+/// Get shell integration script
+/// Note: Windows platform shells don't use Shell Integration, rely on frontend prompt parsing
 pub fn get_shell_integration_script(shell_type: &str) -> Option<&'static str> {
-    // Windows 平台不注入脚本
+    // Windows platform doesn't inject scripts
     #[cfg(windows)]
     {
-        let _ = shell_type; // 避免未使用警告
+        let _ = shell_type; // Avoid unused warning
         None
     }
     
-    // Unix 平台使用 Shell Integration
+    // Unix platform uses Shell Integration
     #[cfg(not(windows))]
     {
         match shell_type {
@@ -40,14 +40,14 @@ pub fn get_shell_integration_script(shell_type: &str) -> Option<&'static str> {
     }
 }
 
-/// 根据 shell 类型获取 Shell 命令
+/// Get Shell command based on shell type
 pub fn get_shell_by_type(shell_type: Option<&str>) -> CommandBuilder {
     match shell_type {
         Some("cmd") => CommandBuilder::new("cmd.exe"),
         Some("powershell") => {
             #[cfg(windows)]
             {
-                // 优先使用 PowerShell Core (pwsh)，回退到 Windows PowerShell
+                // Prefer PowerShell Core (pwsh), fallback to Windows PowerShell
                 if let Ok(pwsh_path) = which_powershell() {
                     CommandBuilder::new(pwsh_path)
                 } else {
@@ -56,7 +56,7 @@ pub fn get_shell_by_type(shell_type: Option<&str>) -> CommandBuilder {
             }
             #[cfg(not(windows))]
             {
-                // 非 Windows 平台，使用默认 shell
+                // Non-Windows platform, use default shell
                 get_default_shell()
             }
         }
@@ -64,45 +64,45 @@ pub fn get_shell_by_type(shell_type: Option<&str>) -> CommandBuilder {
         Some("gitbash") => {
             #[cfg(windows)]
             {
-                // Git Bash: 尝试查找常见安装路径
+                // Git Bash: Try to find common installation paths
                 if let Ok(bash_path) = which_gitbash() {
                     let mut cmd = CommandBuilder::new(bash_path);
-                    // 添加 --login 参数以加载用户配置
+                    // Add --login argument to load user config
                     cmd.arg("--login");
                     cmd
                 } else {
-                    // 回退到默认 shell
+                    // Fallback to default shell
                     get_default_shell()
                 }
             }
             #[cfg(not(windows))]
             {
-                // 非 Windows 平台，使用 bash
+                // Non-Windows platform, use bash
                 CommandBuilder::new("bash")
             }
         }
         Some("bash") => CommandBuilder::new("bash"),
         Some("zsh") => CommandBuilder::new("zsh"),
         Some(custom) if custom.starts_with("custom:") => {
-            // 自定义 shell 路径，格式: "custom:/path/to/shell"
-            let path = &custom[7..]; // 去掉 "custom:" 前缀
+            // Custom shell path, format: "custom:/path/to/shell"
+            let path = &custom[7..]; // Remove "custom:" prefix
             CommandBuilder::new(path)
         }
-        _ => get_default_shell(), // None 或未知类型，使用默认
+        _ => get_default_shell(), // None or unknown type, use default
     }
 }
 
-/// 获取默认 Shell 命令
+/// Get default Shell command
 pub fn get_default_shell() -> CommandBuilder {
     #[cfg(windows)]
     {
-        // Windows: 默认使用 CMD
+        // Windows: Default to CMD
         CommandBuilder::new("cmd.exe")
     }
 
     #[cfg(not(windows))]
     {
-        // Unix: 从环境变量获取 SHELL，回退到 /bin/bash
+        // Unix: Get SHELL from environment variable, fallback to /bin/bash
         let shell = std::env::var("SHELL").unwrap_or_else(|_| "/bin/bash".to_string());
         CommandBuilder::new(shell)
     }
@@ -110,7 +110,7 @@ pub fn get_default_shell() -> CommandBuilder {
 
 #[cfg(windows)]
 fn which_powershell() -> Result<String, ()> {
-    // 尝试查找 PowerShell
+    // Try to find PowerShell
     let powershell_paths = vec![
         "pwsh.exe",           // PowerShell Core
         "powershell.exe",     // Windows PowerShell
@@ -132,7 +132,7 @@ fn which_powershell() -> Result<String, ()> {
 
 #[cfg(windows)]
 fn which_gitbash() -> Result<String, ()> {
-    // Git Bash 常见安装路径
+    // Git Bash common installation paths
     let userprofile = std::env::var("USERPROFILE").unwrap_or_default();
     let gitbash_paths = vec![
         "C:\\Program Files\\Git\\bin\\bash.exe".to_string(),
@@ -140,24 +140,24 @@ fn which_gitbash() -> Result<String, ()> {
         format!("{}\\AppData\\Local\\Programs\\Git\\bin\\bash.exe", userprofile),
     ];
 
-    // 检查路径是否存在
+    // Check if path exists
     for path in gitbash_paths {
         if std::path::Path::new(&path).exists() {
             return Ok(path);
         }
     }
 
-    // 尝试从 PATH 环境变量查找
+    // Try to find from PATH environment variable
     if let Ok(output) = std::process::Command::new("where")
         .arg("bash.exe")
         .output()
     {
         if output.status.success() {
             if let Ok(stdout) = String::from_utf8(output.stdout) {
-                // 获取第一行路径
+                // Get first line path
                 if let Some(first_line) = stdout.lines().next() {
                     let path = first_line.trim();
-                    // 确保是 Git 安装的 bash
+                    // Ensure it's Git-installed bash
                     if path.contains("Git") {
                         return Ok(path.to_string());
                     }
@@ -175,9 +175,9 @@ mod tests {
 
     #[test]
     fn test_get_default_shell() {
-        // 只测试函数能够成功返回，不检查具体内容
-        // 因为 CommandBuilder 不提供获取程序路径的公共 API
+        // Only test that function returns successfully, don't check specific content
+        // Because CommandBuilder doesn't provide public API to get program path
         let _shell = get_default_shell();
-        // 如果能执行到这里，说明函数正常工作
+        // If we reach here, function works correctly
     }
 }

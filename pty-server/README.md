@@ -1,102 +1,96 @@
 # PTY Server
 
-基于 Rust 和 portable-pty 的跨平台 WebSocket PTY 服务器，为 Smart Workflow Obsidian 插件提供终端功能支持。
+A cross-platform WebSocket PTY server based on Rust and portable-pty, providing terminal functionality for the Smart Workflow Obsidian plugin.
 
-## 概述
+## Overview
 
-PTY Server 是一个轻量级的 WebSocket 服务器，负责管理伪终端（PTY）会话。它支持多个并发终端会话，自动检测系统 Shell，并提供跨平台的终端体验。
+PTY Server is a lightweight WebSocket server that manages pseudo-terminal (PTY) sessions. It supports multiple concurrent terminal sessions, automatic shell detection, and provides a cross-platform terminal experience.
 
-## 项目结构
+## Project Structure
 
 ```
 pty-server/
-├── Cargo.toml           # 项目配置和依赖
+├── Cargo.toml           # Project configuration and dependencies
 ├── src/
-│   ├── main.rs          # 主程序入口，命令行参数解析
-│   ├── server.rs        # WebSocket 服务器实现
-│   ├── pty_session.rs   # PTY 会话管理
-│   └── shell.rs         # Shell 检测和配置
-└── target/              # 构建输出目录
+│   ├── main.rs          # Main entry point, CLI argument parsing
+│   ├── server.rs        # WebSocket server implementation
+│   ├── pty_session.rs   # PTY session management
+│   └── shell.rs         # Shell detection and configuration
+└── target/              # Build output directory
 ```
 
-## 核心依赖
+## Core Dependencies
 
-- `portable-pty` 0.8 - 跨平台 PTY 库，支持 Windows/macOS/Linux
-- `tokio` 1.x - 异步运行时，提供高性能并发支持
-- `tokio-tungstenite` 0.21 - WebSocket 服务器实现
-- `serde` + `serde_json` - JSON 消息序列化/反序列化
-- `clap` 4.5 - 命令行参数解析
+- `portable-pty` 0.8 - Cross-platform PTY library for Windows/macOS/Linux
+- `tokio` 1.x - Async runtime for high-performance concurrency
+- `tokio-tungstenite` 0.21 - WebSocket server implementation
+- `serde` + `serde_json` - JSON message serialization/deserialization
+- `clap` 4.5 - Command line argument parsing
 
-## 构建
+## Building
 
-### 本地开发构建
+### Local Development Build
 
 ```bash
-# 开发构建（包含调试信息）
+# Development build (with debug info)
 cargo build
 
-# 发布构建（优化体积和性能）
+# Release build (optimized for size and performance)
 cargo build --release
 
-# 运行测试
+# Run tests
 cargo test
 ```
 
-### 跨平台构建
+### Cross-Platform Build
 
-使用项目提供的构建脚本进行跨平台编译：
+Use the project's build script:
 
 ```bash
-# 构建所有平台
+# Build for current platform
 pnpm build:rust
-
-# 构建特定平台
-node scripts/build-rust.js win32-x64
-node scripts/build-rust.js darwin-x64
-node scripts/build-rust.js darwin-arm64
-node scripts/build-rust.js linux-x64
 ```
 
-构建产物会输出到 `binaries/` 目录：
+Build artifacts are output to the `binaries/` directory:
 - `pty-server-win32-x64.exe` - Windows x64
 - `pty-server-darwin-x64` - macOS Intel
 - `pty-server-darwin-arm64` - macOS Apple Silicon
 - `pty-server-linux-x64` - Linux x64
 
-## 使用方式
+## Usage
 
-### 命令行参数
+### Command Line Arguments
 
 ```bash
-# 启动服务器（随机端口）
+# Start server (random port)
 ./pty-server
 
-# 指定端口
+# Specify port
 ./pty-server --port 8080
 
-# 禁用彩色日志
+# Disable colored logs
 ./pty-server --no-color
 
-# 查看帮助
+# Show help
 ./pty-server --help
 ```
 
-### 启动流程
+### Startup Flow
 
-1. 服务器启动并绑定到指定端口（默认随机端口）
-2. 输出实际监听的端口号到 stdout
-3. 等待 WebSocket 连接
-4. 为每个连接创建独立的 PTY 会话
+1. Server starts and binds to specified port (random by default)
+2. Outputs actual listening port to stdout
+3. Waits for WebSocket connections
+4. Creates independent PTY session for each connection
 
-## 通信协议
+## Communication Protocol
 
-### WebSocket 消息格式
+### WebSocket Message Format
 
-所有消息使用 JSON 格式，包含 `type` 字段标识消息类型。
+All messages use JSON format with a `type` field to identify message type.
 
-#### 客户端 → 服务器
+#### Client → Server
 
-**输入数据**
+**Input Data**
 ```json
 {
   "type": "input",
@@ -104,7 +98,7 @@ node scripts/build-rust.js linux-x64
 }
 ```
 
-**调整终端大小**
+**Resize Terminal**
 ```json
 {
   "type": "resize",
@@ -113,9 +107,9 @@ node scripts/build-rust.js linux-x64
 }
 ```
 
-#### 服务器 → 客户端
+#### Server → Client
 
-**输出数据**
+**Output Data**
 ```json
 {
   "type": "output",
@@ -123,7 +117,7 @@ node scripts/build-rust.js linux-x64
 }
 ```
 
-**会话退出**
+**Session Exit**
 ```json
 {
   "type": "exit",
@@ -131,11 +125,11 @@ node scripts/build-rust.js linux-x64
 }
 ```
 
-## 架构设计
+## Architecture
 
-### 异步并发模型
+### Async Concurrency Model
 
-服务器采用 Tokio 异步运行时，支持高效的并发处理：
+The server uses Tokio async runtime for efficient concurrent processing:
 
 ```
 ┌─────────────────────────────────────┐
@@ -154,19 +148,19 @@ node scripts/build-rust.js linux-x64
    └─────────┘         └─────────┘
 ```
 
-### 会话生命周期
+### Session Lifecycle
 
-1. **连接建立**: 接受 WebSocket 连接，创建 PTY 会话
-2. **Shell 启动**: 自动检测并启动系统默认 Shell
-3. **数据转发**: 
-   - WebSocket → PTY: 用户输入
-   - PTY → WebSocket: 终端输出
-4. **尺寸同步**: 处理终端窗口大小调整
-5. **会话清理**: 连接断开时清理 PTY 进程和资源
+1. **Connection Established**: Accept WebSocket connection, create PTY session
+2. **Shell Startup**: Auto-detect and start system default shell
+3. **Data Forwarding**: 
+   - WebSocket → PTY: User input
+   - PTY → WebSocket: Terminal output
+4. **Size Sync**: Handle terminal window resize
+5. **Session Cleanup**: Clean up PTY process and resources on disconnect
 
-### Shell 检测逻辑
+### Shell Detection Logic
 
-服务器会按优先级自动检测可用的 Shell：
+The server auto-detects available shells by priority:
 
 **Windows**:
 1. PowerShell 7+ (`pwsh.exe`)
@@ -174,85 +168,84 @@ node scripts/build-rust.js linux-x64
 3. CMD (`cmd.exe`)
 
 **Unix/Linux/macOS**:
-1. 用户默认 Shell (`$SHELL` 环境变量)
+1. User default shell (`$SHELL` environment variable)
 2. Bash (`/bin/bash`)
 3. Zsh (`/bin/zsh`)
 4. Sh (`/bin/sh`)
 
-## 错误处理
+## Error Handling
 
-服务器实现了完善的错误处理机制：
+The server implements comprehensive error handling:
 
-- **连接错误**: 自动关闭异常连接，不影响其他会话
-- **PTY 创建失败**: 返回错误信息并关闭连接
-- **Shell 启动失败**: 尝试备用 Shell，记录详细日志
-- **消息解析错误**: 忽略无效消息，保持连接稳定
+- **Connection Errors**: Auto-close abnormal connections without affecting other sessions
+- **PTY Creation Failure**: Return error message and close connection
+- **Shell Startup Failure**: Try fallback shell, log detailed info
+- **Message Parse Errors**: Ignore invalid messages, maintain connection stability
 
-## 性能优化
+## Performance Optimization
 
-- **零拷贝**: 使用 `Bytes` 类型减少内存拷贝
-- **异步 I/O**: 所有 I/O 操作均为非阻塞
-- **资源清理**: 连接断开时立即释放资源
-- **编译优化**: Release 构建启用 LTO 和符号剥离
+- **Zero-Copy**: Use `Bytes` type to reduce memory copying
+- **Async I/O**: All I/O operations are non-blocking
+- **Resource Cleanup**: Immediately release resources on disconnect
+- **Build Optimization**: Release builds enable LTO and symbol stripping
 
-## 安全考虑
+## Security Considerations
 
-- **本地绑定**: 默认仅监听 `127.0.0.1`，不暴露到外网
-- **无认证**: 假设客户端在同一主机上，由 Obsidian 插件管理
-- **进程隔离**: 每个会话独立进程，互不影响
-- **资源限制**: 依赖操作系统的进程和文件描述符限制
+- **Local Binding**: Default listens only on `127.0.0.1`, not exposed externally
+- **No Authentication**: Assumes client is on same host, managed by Obsidian plugin
+- **Process Isolation**: Each session runs in independent process
+- **Resource Limits**: Relies on OS process and file descriptor limits
 
-## 日志输出
+## Log Output
 
-服务器使用彩色日志（可通过 `--no-color` 禁用）：
+The server uses colored logs (disable with `--no-color`):
 
-- **绿色**: 成功操作（服务器启动、会话创建）
-- **黄色**: 警告信息（Shell 检测失败）
-- **红色**: 错误信息（连接失败、PTY 错误）
-- **蓝色**: 调试信息（消息接收、数据转发）
+- **Green**: Successful operations (server start, session creation)
+- **Yellow**: Warnings (shell detection failure)
+- **Red**: Errors (connection failure, PTY errors)
+- **Blue**: Debug info (message received, data forwarding)
 
-## 故障排查
+## Troubleshooting
 
-### 服务器无法启动
+### Server Won't Start
 
-- 检查端口是否被占用
-- 确认有足够的系统权限
-- 查看错误日志输出
+- Check if port is already in use
+- Confirm sufficient system permissions
+- Check error log output
 
-### 终端无输出
+### No Terminal Output
 
-- 确认 WebSocket 连接已建立
-- 检查消息格式是否正确
-- 验证 Shell 是否成功启动
+- Confirm WebSocket connection is established
+- Check message format is correct
+- Verify shell started successfully
 
-### 中文乱码
+### Character Encoding Issues
 
-- 确保终端编码设置为 UTF-8
-- Windows 需要设置 `chcp 65001`
-- 检查 Shell 的 locale 配置
+- Ensure terminal encoding is set to UTF-8
+- On Windows, set `chcp 65001`
+- Check shell locale configuration
 
-## 开发测试
+## Development Testing
 
-使用项目提供的测试脚本：
+Use the project's test script:
 
 ```bash
-# 运行集成测试
+# Run integration tests
 node tests/test-pty-server.js
 ```
 
-测试内容包括：
-- 服务器启动和端口监听
-- WebSocket 连接建立
-- 命令执行和输出接收
-- 终端大小调整
-- 会话清理
+Test coverage includes:
+- Server startup and port listening
+- WebSocket connection establishment
+- Command execution and output reception
+- Terminal resize
+- Session cleanup
 
-## 与插件集成
+## Plugin Integration
 
-PTY Server 由 Obsidian 插件的 `TerminalService` 管理：
+PTY Server is managed by the Obsidian plugin's `TerminalService`:
 
-1. **自动下载**: `BinaryManager` 负责下载和验证二进制文件
-2. **生命周期**: 插件启动时启动服务器，卸载时停止
-3. **崩溃恢复**: 检测到服务器崩溃时自动重启
-4. **多实例**: 支持多个终端标签页共享同一服务器
-
+1. **Auto Download**: `BinaryManager` handles binary download and verification
+2. **Lifecycle**: Server starts with plugin, stops on unload
+3. **Crash Recovery**: Auto-restart on server crash detection
+4. **Multi-Instance**: Multiple terminal tabs share the same server

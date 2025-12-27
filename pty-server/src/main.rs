@@ -1,4 +1,4 @@
-// PTY 服务器主程序
+// PTY Server Main Program
 mod server;
 mod pty_session;
 mod shell;
@@ -6,7 +6,7 @@ mod shell;
 use server::{Server, ServerConfig};
 use std::env;
 
-/// 简单的日志宏
+/// Logging macro
 macro_rules! log_info {
     ($($arg:tt)*) => {
         eprintln!("[INFO] {}", format!($($arg)*));
@@ -21,7 +21,7 @@ macro_rules! log_debug {
     };
 }
 
-/// 手动解析命令行参数（比 clap 快约 10-20ms）
+/// Parse command line arguments
 fn parse_args() -> u16 {
     let args: Vec<String> = env::args().collect();
     let mut port: u16 = 0;
@@ -41,8 +41,8 @@ fn parse_args() -> u16 {
             "-h" | "--help" => {
                 eprintln!("Usage: pty-server [OPTIONS]");
                 eprintln!("Options:");
-                eprintln!("  -p, --port <PORT>  监听端口（0 表示随机端口）[default: 0]");
-                eprintln!("  -h, --help         显示帮助信息");
+                eprintln!("  -p, --port <PORT>  Listen port (0 for random port) [default: 0]");
+                eprintln!("  -h, --help         Show help information");
                 std::process::exit(0);
             }
             _ => {}
@@ -55,24 +55,24 @@ fn parse_args() -> u16 {
 
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // 手动解析命令行参数
+    // Parse command line arguments
     let port = parse_args();
 
-    log_debug!("启动参数: port={}", port);
+    log_debug!("Startup args: port={}", port);
 
-    // 创建服务器配置
+    // Create server config
     let config = ServerConfig { port };
 
-    // 创建并启动服务器
+    // Create and start server
     let server = Server::new(config);
     let port = server.start().await?;
 
-    // 保持主线程运行
-    log_info!("PTY 服务器已启动，监听端口: {}", port);
+    // Keep main thread running
+    log_info!("PTY server started, listening on port: {}", port);
     
-    // 等待 Ctrl+C 信号
+    // Wait for Ctrl+C signal
     tokio::signal::ctrl_c().await?;
-    log_info!("收到退出信号，正在关闭服务器...");
+    log_info!("Received exit signal, shutting down server...");
 
     Ok(())
 }

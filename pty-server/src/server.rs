@@ -1,4 +1,4 @@
-// WebSocket 服务器实现
+// WebSocket Server Implementation
 use tokio::net::TcpListener;
 use tokio_tungstenite::{accept_async, tungstenite::Message};
 use futures_util::{StreamExt, SinkExt};
@@ -7,7 +7,7 @@ use crate::pty_session::PtySession;
 use tokio::sync::Mutex as TokioMutex;
 use std::sync::{Arc, Mutex};
 
-/// 简单的日志宏
+/// Logging macros
 macro_rules! log_info {
     ($($arg:tt)*) => {
         eprintln!("[INFO] {}", format!($($arg)*));
@@ -28,7 +28,7 @@ macro_rules! log_debug {
     };
 }
 
-/// WebSocket 命令消息
+/// WebSocket command message
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(tag = "type")]
 pub enum Command {
@@ -56,12 +56,12 @@ pub enum Command {
     },
 }
 
-/// WebSocket 服务器配置
+/// WebSocket server configuration
 pub struct ServerConfig {
     pub port: u16,
 }
 
-/// WebSocket 服务器
+/// WebSocket server
 pub struct Server {
     config: ServerConfig,
 }
@@ -71,30 +71,30 @@ impl Server {
         Self { config }
     }
 
-    /// 启动服务器
+    /// Start the server
     pub async fn start(&self) -> Result<u16, Box<dyn std::error::Error>> {
         let addr = format!("127.0.0.1:{}", self.config.port);
         let listener = TcpListener::bind(&addr).await?;
         let local_addr = listener.local_addr()?;
         let port = local_addr.port();
 
-        log_info!("服务器绑定到 {}", local_addr);
+        log_info!("Server bound to {}", local_addr);
 
-        // 输出端口信息到 stdout（JSON 格式）
+        // Output port info to stdout (JSON format)
         println!(
             r#"{{"port": {}, "pid": {}}}"#,
             port,
             std::process::id()
         );
 
-        // 主循环：接受 WebSocket 连接
+        // Main loop: accept WebSocket connections
         tokio::spawn(async move {
-            log_info!("开始监听 WebSocket 连接...");
+            log_info!("Listening for WebSocket connections...");
             while let Ok((stream, addr)) = listener.accept().await {
-                log_debug!("接受来自 {} 的连接", addr);
+                log_debug!("Accepted connection from {}", addr);
                 tokio::spawn(async move {
                     if let Err(e) = handle_connection(stream).await {
-                        log_error!("连接处理错误: {}", e);
+                        log_error!("Connection handling error: {}", e);
                     }
                 });
             }
@@ -104,20 +104,20 @@ impl Server {
     }
 }
 
-/// 处理单个 WebSocket 连接
+/// Handle a single WebSocket connection
 async fn handle_connection(
     stream: tokio::net::TcpStream,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    // 升级到 WebSocket
+    // Upgrade to WebSocket
     let ws_stream = accept_async(stream).await?;
     
-    log_info!("WebSocket 连接已建立");
+    log_info!("WebSocket connection established");
     
-    // 分离读写流
+    // Split read/write streams
     let (ws_sender, mut ws_receiver) = ws_stream.split();
     let ws_sender = Arc::new(TokioMutex::new(ws_sender));
     
-    // 等待第一条消息（应该是 init 命令）
+    // Wait for first message (should be init command)
     let mut shell_type: Option<String> = None;
     let mut shell_args: Option<Vec<String>> = None;
     let mut cwd: Option<String> = None;
@@ -126,7 +126,7 @@ async fn handle_connection(
     
     if let Some(Ok(Message::Text(text))) = ws_receiver.next().await {
         if let Ok(Command::Init { shell_type: st, shell_args: sa, cwd: c, env: e }) = serde_json::from_str::<Command>(&text) {
-            log_info!("收到初始化命令，shell_type: {:?}, shell_args: {:?}, cwd: {:?}", st, sa, c);
+            log_info!("Received init command, shell_type: {:?}, shell_args: {:?}, cwd: {:?}", st, sa, c);
             shell_type = st;
             shell_args = sa;
             cwd = c;
@@ -136,10 +136,10 @@ async fn handle_connection(
     }
     
     if !first_msg_processed {
-        log_info!("未收到初始化命令，使用默认配置");
+        log_info!("No init command received, using default config");
     }
     
-    // 创建 PTY 会话（reader 和 writer 是独立的，不需要锁）
+    // Create PTY session (reader and writer are independent, no lock needed)
     let (pty_session, pty_reader, pty_writer) = PtySession::new(
         80, 
         24, 
@@ -150,26 +150,26 @@ async fn handle_connection(
     )?;
     let pty_session = Arc::new(TokioMutex::new(pty_session));
     
-    // 将 reader 和 writer 包装在 Arc<Mutex<>> 中以便在任务间共享
+    // Wrap reader and writer in Arc<Mutex<>> for sharing between tasks
     let pty_reader = Arc::new(Mutex::new(pty_reader));
     let pty_writer = Arc::new(Mutex::new(pty_writer));
     
-    log_info!("PTY 会话已创建，shell_type: {:?}", shell_type);
+    log_info!("PTY session created, shell_type: {:?}", shell_type);
     
-    // 克隆用于读取任务
+    // Clone for read task
     let ws_sender_for_read = Arc::clone(&ws_sender);
     let pty_reader_for_read = Arc::clone(&pty_reader);
     
-    // 克隆用于 shell integration 注入
+    // Clone for shell integration injection
     let pty_writer_for_init = Arc::clone(&pty_writer);
     let shell_type_for_init = shell_type.clone();
     
-    // 启动 PTY 输出读取任务
+    // Start PTY output read task
     let read_task = tokio::spawn(async move {
         let mut first_output = true;
         
         loop {
-            // 在阻塞任务中读取 PTY 输出
+            // Read PTY output in blocking task
             let reader = Arc::clone(&pty_reader_for_read);
             let result = tokio::task::spawn_blocking(move || -> Result<(Vec<u8>, usize), String> {
                 let mut reader = reader.lock().unwrap();
@@ -182,25 +182,25 @@ async fn handle_connection(
             
             match result {
                 Ok(Ok((data, n))) if n > 0 => {
-                    log_debug!("读取到 PTY 输出: {} 字节", n);
-                    // 发送到 WebSocket
+                    log_debug!("Read PTY output: {} bytes", n);
+                    // Send to WebSocket
                     let mut sender = ws_sender_for_read.lock().await;
                     if let Err(e) = sender.send(Message::Binary(data[..n].to_vec())).await {
-                        log_error!("发送 PTY 输出失败: {}", e);
+                        log_error!("Failed to send PTY output: {}", e);
                         break;
                     }
                     drop(sender);
                     
-                    // 第一次输出后，注入 Shell Integration 脚本
+                    // After first output, inject Shell Integration script
                     if first_output {
                         first_output = false;
                         if let Some(ref st) = shell_type_for_init {
                             if let Some(script) = crate::shell::get_shell_integration_script(st) {
                                 let mut writer = pty_writer_for_init.lock().unwrap();
                                 if let Err(e) = writer.write(script.as_bytes()) {
-                                    log_error!("发送 Shell Integration 脚本失败: {}", e);
+                                    log_error!("Failed to send Shell Integration script: {}", e);
                                 } else {
-                                    log_debug!("已发送 Shell Integration 脚本");
+                                    log_debug!("Shell Integration script sent");
                                 }
                             }
                         }
@@ -208,109 +208,109 @@ async fn handle_connection(
                 }
                 Ok(Ok(_)) => {
                     // EOF
-                    log_info!("PTY 输出结束");
+                    log_info!("PTY output ended");
                     break;
                 }
                 Ok(Err(e)) => {
-                    log_error!("读取 PTY 输出错误: {}", e);
+                    log_error!("PTY output read error: {}", e);
                     break;
                 }
                 Err(e) => {
-                    log_error!("PTY 读取任务错误: {}", e);
+                    log_error!("PTY read task error: {}", e);
                     break;
                 }
             }
         }
     });
     
-    // 克隆用于写入
+    // Clone for write
     let pty_writer_for_write = Arc::clone(&pty_writer);
     
-    // 消息处理循环
+    // Message handling loop
     while let Some(msg_result) = ws_receiver.next().await {
         match msg_result {
             Ok(msg) => {
-                log_debug!("收到消息类型: {:?}", std::mem::discriminant(&msg));
+                log_debug!("Received message type: {:?}", std::mem::discriminant(&msg));
                 
                 match msg {
                     Message::Text(text) => {
-                        // 尝试解析为 JSON 命令
+                        // Try to parse as JSON command
                         if let Ok(cmd) = serde_json::from_str::<Command>(&text) {
-                            log_debug!("解析到命令: {:?}", cmd);
+                            log_debug!("Parsed command: {:?}", cmd);
                             handle_command(cmd, &pty_session).await?;
                         } else {
-                            // 普通文本输入，写入 PTY
-                            log_debug!("收到文本输入: {} 字节", text.len());
+                            // Plain text input, write to PTY
+                            log_debug!("Received text input: {} bytes", text.len());
                             let mut writer = pty_writer_for_write.lock().unwrap();
                             if let Err(e) = writer.write(text.as_bytes()) {
-                                log_error!("写入 PTY 失败: {}", e);
+                                log_error!("Failed to write to PTY: {}", e);
                             }
                         }
                     }
                     Message::Binary(data) => {
-                        // 二进制输入，写入 PTY
-                        log_debug!("收到二进制输入: {} 字节", data.len());
+                        // Binary input, write to PTY
+                        log_debug!("Received binary input: {} bytes", data.len());
                         let mut writer = pty_writer_for_write.lock().unwrap();
                         if let Err(e) = writer.write(&data) {
-                            log_error!("写入 PTY 失败: {}", e);
+                            log_error!("Failed to write to PTY: {}", e);
                         }
                     }
                     Message::Close(_) => {
-                        log_info!("客户端关闭连接");
+                        log_info!("Client closed connection");
                         break;
                     }
                     Message::Ping(data) => {
-                        // 响应 Ping
+                        // Respond to Ping
                         let mut sender = ws_sender.lock().await;
                         sender.send(Message::Pong(data)).await?;
                     }
                     Message::Pong(_) => {
-                        // 忽略 Pong
+                        // Ignore Pong
                     }
                     _ => {
-                        log_debug!("忽略的消息类型");
+                        log_debug!("Ignored message type");
                     }
                 }
             }
             Err(e) => {
-                log_error!("接收消息错误: {}", e);
+                log_error!("Message receive error: {}", e);
                 break;
             }
         }
     }
     
-    log_info!("WebSocket 连接已关闭");
+    log_info!("WebSocket connection closed");
     
-    // 终止 PTY 进程
+    // Terminate PTY process
     let mut pty = pty_session.lock().await;
     let _ = pty.kill();
-    drop(pty); // 释放锁
+    drop(pty); // Release lock
     
-    // 等待读取任务结束
+    // Wait for read task to finish
     let _ = read_task.await;
     
     Ok(())
 }
 
-/// 处理命令消息
+/// Handle command message
 async fn handle_command(
     cmd: Command,
     pty_session: &Arc<TokioMutex<PtySession>>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     match cmd {
         Command::Resize { cols, rows } => {
-            log_info!("收到 resize 命令: {}x{}", cols, rows);
+            log_info!("Received resize command: {}x{}", cols, rows);
             let mut pty = pty_session.lock().await;
             pty.resize(cols, rows)?;
         }
         Command::Env { cwd, env } => {
-            log_info!("收到 env 命令: cwd={:?}, env={:?}", cwd, env);
-            // 注意：环境变量和工作目录应该在 PTY 创建时设置
-            // 这里只是记录，实际实现需要在创建时处理
+            log_info!("Received env command: cwd={:?}, env={:?}", cwd, env);
+            // Note: Environment variables and working directory should be set at PTY creation
+            // This is just logged here, actual implementation needs to handle at creation time
         }
         Command::Init { .. } => {
-            log_info!("收到 init 命令（已在连接建立时处理）");
-            // Init 命令在连接建立时已处理，这里忽略
+            log_info!("Received init command (already handled at connection establishment)");
+            // Init command already handled at connection establishment, ignore here
         }
     }
     Ok(())

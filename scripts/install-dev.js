@@ -1,13 +1,13 @@
 /**
- * 开发环境安装脚本
- * 将插件文件复制到 Obsidian 插件目录进行测试
+ * Development Environment Install Script
+ * Copy plugin files to Obsidian plugins directory for testing
  * 
- * 用法:
- *   node scripts/install-dev.js              # 交互模式
- *   node scripts/install-dev.js -f           # 强制模式（跳过确认）
- *   node scripts/install-dev.js --kill       # 自动关闭 Obsidian 进程
- *   node scripts/install-dev.js -f --kill    # 强制模式 + 自动关闭 Obsidian
- *   node scripts/install-dev.js --reset      # 重置保存的配置
+ * Usage:
+ *   node scripts/install-dev.js              # Interactive mode
+ *   node scripts/install-dev.js -f           # Force mode (skip confirmation)
+ *   node scripts/install-dev.js --kill       # Auto-close Obsidian process
+ *   node scripts/install-dev.js -f --kill    # Force mode + auto-close Obsidian
+ *   node scripts/install-dev.js --reset      # Reset saved configuration
  */
 
 const fs = require('fs');
@@ -18,13 +18,13 @@ const { execSync, spawn } = require('child_process');
 const ROOT_DIR = path.join(__dirname, '..');
 const CONFIG_FILE = path.join(ROOT_DIR, '.dev-install-config.json');
 
-// 解析命令行参数
+// Parse command line arguments
 const args = process.argv.slice(2);
 const FORCE_MODE = args.includes('-f') || args.includes('--force');
 const KILL_OBSIDIAN = args.includes('--kill');
 const RESET_CONFIG = args.includes('--reset');
 
-// 颜色输出
+// Color output
 const colors = {
   reset: '\x1b[0m',
   green: '\x1b[32m',
@@ -38,28 +38,28 @@ function log(message, color = 'reset') {
   console.log(`${colors[color]}${message}${colors.reset}`);
 }
 
-// 加载保存的配置
+// Load saved configuration
 function loadConfig() {
   try {
     if (fs.existsSync(CONFIG_FILE)) {
       return JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf-8'));
     }
   } catch (e) {
-    // 忽略错误
+    // Ignore errors
   }
   return {};
 }
 
-// 保存配置
+// Save configuration
 function saveConfig(config) {
   try {
     fs.writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2));
   } catch (e) {
-    log(`  ⚠️  无法保存配置: ${e.message}`, 'yellow');
+    log(`  ⚠️  Cannot save config: ${e.message}`, 'yellow');
   }
 }
 
-// 检测操作系统
+// Detect operating system
 function getPlatform() {
   const platform = process.platform;
   if (platform === 'win32') return 'windows';
@@ -67,11 +67,10 @@ function getPlatform() {
   return 'linux';
 }
 
-// 获取 Obsidian 可执行文件路径
+// Get Obsidian executable path
 function getObsidianPath() {
   const platform = getPlatform();
   if (platform === 'windows') {
-    // Windows 常见安装路径
     const possiblePaths = [
       path.join(process.env.LOCALAPPDATA || '', 'Obsidian', 'Obsidian.exe'),
       path.join(process.env.PROGRAMFILES || '', 'Obsidian', 'Obsidian.exe'),
@@ -83,7 +82,6 @@ function getObsidianPath() {
   } else if (platform === 'macos') {
     return '/Applications/Obsidian.app';
   } else {
-    // Linux - 尝试使用 which 查找
     try {
       return execSync('which obsidian 2>/dev/null', { encoding: 'utf-8' }).trim();
     } catch (e) {
@@ -93,7 +91,7 @@ function getObsidianPath() {
   return null;
 }
 
-// 关闭 Obsidian 进程
+// Kill Obsidian process
 function killObsidian() {
   const platform = getPlatform();
   try {
@@ -102,15 +100,14 @@ function killObsidian() {
     } else {
       execSync('pkill -f Obsidian 2>/dev/null || true', { stdio: 'ignore' });
     }
-    log('  ✓ 已关闭 Obsidian 进程', 'green');
+    log('  ✓ Obsidian process closed', 'green');
     return true;
   } catch (e) {
-    // 进程可能不存在，忽略错误
     return false;
   }
 }
 
-// 启动 Obsidian
+// Start Obsidian
 function startObsidian() {
   const platform = getPlatform();
   const obsidianPath = getObsidianPath();
@@ -118,10 +115,8 @@ function startObsidian() {
   try {
     if (platform === 'windows') {
       if (obsidianPath && fs.existsSync(obsidianPath)) {
-        // 使用完整路径启动
         spawn(obsidianPath, [], { detached: true, stdio: 'ignore', shell: true }).unref();
       } else {
-        // 尝试通过 explorer 启动 URI scheme
         execSync('start obsidian://', { stdio: 'ignore', shell: true });
       }
     } else if (platform === 'macos') {
@@ -129,15 +124,15 @@ function startObsidian() {
     } else {
       spawn('obsidian', [], { detached: true, stdio: 'ignore' }).unref();
     }
-    log('  ✓ 已启动 Obsidian', 'green');
+    log('  ✓ Obsidian started', 'green');
     return true;
   } catch (e) {
-    log(`  ⚠️  无法自动启动 Obsidian: ${e.message}`, 'yellow');
+    log(`  ⚠️  Cannot auto-start Obsidian: ${e.message}`, 'yellow');
     return false;
   }
 }
 
-// 检查 Obsidian 是否在运行
+// Check if Obsidian is running
 function isObsidianRunning() {
   const platform = getPlatform();
   try {
@@ -153,7 +148,7 @@ function isObsidianRunning() {
   }
 }
 
-// 带重试的文件复制
+// Copy file with retry
 async function copyFileWithRetry(srcPath, destPath, maxRetries = 3, retryDelay = 1000) {
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
@@ -162,7 +157,7 @@ async function copyFileWithRetry(srcPath, destPath, maxRetries = 3, retryDelay =
     } catch (error) {
       if (error.code === 'EBUSY' || error.code === 'EPERM') {
         if (attempt < maxRetries) {
-          log(`  ⚠️  文件被锁定，${retryDelay / 1000}秒后重试 (${attempt}/${maxRetries})...`, 'yellow');
+          log(`  ⚠️  File locked, retrying in ${retryDelay / 1000}s (${attempt}/${maxRetries})...`, 'yellow');
           await sleep(retryDelay);
           continue;
         }
@@ -177,7 +172,7 @@ function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-// 创建 readline 接口
+// Create readline interface
 let rl = null;
 function getReadline() {
   if (!rl) {
@@ -201,33 +196,29 @@ function question(query) {
 }
 
 async function main() {
-  log('\n📦 Obsidian 插件开发安装工具\n', 'cyan');
+  log('\n📦 Obsidian Plugin Development Install Tool\n', 'cyan');
   
-  // 显示当前模式
   if (FORCE_MODE || KILL_OBSIDIAN) {
     const modes = [];
-    if (FORCE_MODE) modes.push('强制模式');
-    if (KILL_OBSIDIAN) modes.push('自动关闭Obsidian');
-    log(`   模式: ${modes.join(' + ')}`, 'gray');
+    if (FORCE_MODE) modes.push('Force mode');
+    if (KILL_OBSIDIAN) modes.push('Auto-close Obsidian');
+    log(`   Mode: ${modes.join(' + ')}`, 'gray');
   }
 
-  // 重置配置
   if (RESET_CONFIG) {
     if (fs.existsSync(CONFIG_FILE)) {
       fs.unlinkSync(CONFIG_FILE);
-      log('✓ 已重置配置\n', 'green');
+      log('✓ Configuration reset\n', 'green');
     }
     closeReadline();
     process.exit(0);
   }
 
-  // 加载配置
   const config = loadConfig();
 
-  // 1. 检查必需文件
-  log('🔍 检查必需文件...', 'cyan');
+  // 1. Check required files
+  log('🔍 Checking required files...', 'cyan');
   
-  // 根据平台确定需要的二进制文件
   const platform = getPlatform();
   const arch = process.arch === 'arm64' ? 'arm64' : 'x64';
   let binaryName;
@@ -251,15 +242,15 @@ async function main() {
     const filePath = path.join(ROOT_DIR, file);
     if (!fs.existsSync(filePath)) {
       missingFiles.push(file);
-      log(`  ❌ 缺少: ${file}`, 'red');
+      log(`  ❌ Missing: ${file}`, 'red');
     } else {
       log(`  ✓ ${file}`, 'green');
     }
   }
 
   if (missingFiles.length > 0) {
-    log('\n❌ 错误: 缺少必需文件', 'red');
-    log('请先运行以下命令:', 'yellow');
+    log('\n❌ Error: Missing required files', 'red');
+    log('Please run the following commands:', 'yellow');
     if (missingFiles.some(f => f.endsWith('.js') || f.endsWith('.json') || f.endsWith('.css'))) {
       log('  pnpm build', 'yellow');
     }
@@ -270,34 +261,32 @@ async function main() {
     process.exit(1);
   }
 
-  log('\n✅ 所有必需文件存在\n', 'green');
+  log('\n✅ All required files exist\n', 'green');
 
-  // 2. 获取 Obsidian 插件目录
+  // 2. Get Obsidian plugins directory
   let pluginDirPath = config.pluginDir;
 
   if (!pluginDirPath) {
-    log('📁 请输入你的 Obsidian 插件目录路径:', 'cyan');
-    log('   默认路径示例: C:\\Users\\<用户名>\\AppData\\Roaming\\Obsidian\\<库名>\\plugins', 'yellow');
-    log('   或者在 Obsidian 中打开插件目录，复制路径\n', 'yellow');
+    log('📁 Please enter your Obsidian plugins directory path:', 'cyan');
+    log('   Example: C:\\Users\\<username>\\Documents\\Obsidian\\<vault>\\.obsidian\\plugins', 'yellow');
+    log('   Or open the plugins folder in Obsidian and copy the path\n', 'yellow');
 
-    const pluginDir = await question('插件目录路径: ');
+    const pluginDir = await question('Plugins directory path: ');
 
     if (!pluginDir || pluginDir.trim() === '') {
-      log('\n❌ 未提供路径', 'red');
+      log('\n❌ No path provided', 'red');
       closeReadline();
       process.exit(1);
     }
 
     pluginDirPath = pluginDir.trim().replace(/['"]/g, '');
   } else {
-    log(`📁 使用保存的插件目录: ${pluginDirPath}`, 'cyan');
-    log('   (运行 node scripts/install-dev.js --reset 可重置)\n', 'gray');
+    log(`📁 Using saved plugins directory: ${pluginDirPath}`, 'cyan');
+    log('   (Run node scripts/install-dev.js --reset to reset)\n', 'gray');
   }
 
-  // 验证目录是否存在
   if (!fs.existsSync(pluginDirPath)) {
-    log(`\n❌ 目录不存在: ${pluginDirPath}`, 'red');
-    // 清除无效的保存配置
+    log(`\n❌ Directory does not exist: ${pluginDirPath}`, 'red');
     if (config.pluginDir) {
       delete config.pluginDir;
       saveConfig(config);
@@ -306,45 +295,43 @@ async function main() {
     process.exit(1);
   }
 
-  // 保存有效的目录路径
   if (config.pluginDir !== pluginDirPath) {
     config.pluginDir = pluginDirPath;
     saveConfig(config);
-    log('  ✓ 已保存插件目录路径（下次将自动使用）', 'green');
+    log('  ✓ Plugins directory path saved (will be used automatically next time)', 'green');
   }
 
-  // 3. 创建插件文件夹
+  // 3. Create plugin folder
   const targetDir = path.join(pluginDirPath, 'obsidian-smart-workflow');
   
-  log(`\n📂 目标目录: ${targetDir}`, 'cyan');
+  log(`\n📂 Target directory: ${targetDir}`, 'cyan');
 
   if (fs.existsSync(targetDir)) {
     if (!FORCE_MODE) {
-      const overwrite = await question('\n⚠️  目标目录已存在，是否覆盖? (y/n): ');
+      const overwrite = await question('\n⚠️  Target directory exists, overwrite? (y/n): ');
       if (overwrite.toLowerCase() !== 'y') {
-        log('\n❌ 已取消', 'yellow');
+        log('\n❌ Cancelled', 'yellow');
         closeReadline();
         process.exit(0);
       }
     } else {
-      log('  ⚠️  目标目录已存在，强制覆盖', 'yellow');
+      log('  ⚠️  Target directory exists, force overwriting', 'yellow');
     }
   } else {
     fs.mkdirSync(targetDir, { recursive: true });
-    log('  ✓ 创建目标目录', 'green');
+    log('  ✓ Created target directory', 'green');
   }
 
-  // 4. 如果需要，关闭 Obsidian
+  // 4. If needed, close Obsidian
   if (KILL_OBSIDIAN && isObsidianRunning()) {
-    log('\n🔄 关闭 Obsidian 进程...', 'cyan');
+    log('\n🔄 Closing Obsidian process...', 'cyan');
     killObsidian();
-    await sleep(1000); // 等待进程完全退出
+    await sleep(1000);
   }
 
-  // 5. 复制文件
-  log('\n📋 复制文件...', 'cyan');
+  // 5. Copy files
+  log('\n📋 Copying files...', 'cyan');
 
-  // 复制核心文件
   const coreFiles = ['main.js', 'manifest.json', 'styles.css'];
   for (const file of coreFiles) {
     const srcPath = path.join(ROOT_DIR, file);
@@ -359,7 +346,6 @@ async function main() {
     }
   }
 
-  // 复制二进制文件
   const binariesDir = path.join(targetDir, 'binaries');
   if (!fs.existsSync(binariesDir)) {
     fs.mkdirSync(binariesDir, { recursive: true });
@@ -378,54 +364,53 @@ async function main() {
     } catch (error) {
       if (error.code === 'EBUSY' || error.code === 'EPERM') {
         hasLockedFile = true;
-        log(`  ❌ binaries/${file}: 文件被锁定`, 'red');
+        log(`  ❌ binaries/${file}: File locked`, 'red');
       } else {
         log(`  ❌ binaries/${file}: ${error.message}`, 'red');
       }
     }
   }
 
-  // 如果有文件被锁定，提示用户
   if (hasLockedFile) {
-    log('\n⚠️  部分文件被锁定（可能 Obsidian 正在使用）', 'yellow');
-    log('   解决方案:', 'yellow');
-    log('   1. 关闭 Obsidian 后重新运行此脚本', 'yellow');
-    log('   2. 或使用 --kill 参数自动关闭 Obsidian:', 'yellow');
+    log('\n⚠️  Some files are locked (Obsidian may be using them)', 'yellow');
+    log('   Solutions:', 'yellow');
+    log('   1. Close Obsidian and run this script again', 'yellow');
+    log('   2. Or use --kill flag to auto-close Obsidian:', 'yellow');
     log('      node scripts/install-dev.js -f --kill\n', 'cyan');
     closeReadline();
     process.exit(1);
   }
 
-  // 6. 如果之前关闭了 Obsidian，自动重启
+  // 6. If Obsidian was closed earlier, restart it
   if (KILL_OBSIDIAN) {
-    log('\n🚀 重新启动 Obsidian...', 'cyan');
+    log('\n🚀 Restarting Obsidian...', 'cyan');
     await sleep(500);
     startObsidian();
   }
 
-  // 7. 完成
-  log('\n🎉 安装完成！', 'green');
+  // 7. Complete
+  log('\n🎉 Installation complete!', 'green');
   
   if (!KILL_OBSIDIAN) {
-    log('\n下一步:', 'cyan');
-    log('  1. 打开 Obsidian', 'yellow');
-    log('  2. 进入设置 → 第三方插件', 'yellow');
-    log('  3. 关闭"安全模式"（如果启用）', 'yellow');
-    log('  4. 在已安装插件列表中找到 "Smart Workflow"', 'yellow');
-    log('  5. 启用插件', 'yellow');
-    log('  6. 使用命令面板 (Ctrl+P) 输入 "Terminal" 测试终端功能\n', 'yellow');
+    log('\nNext steps:', 'cyan');
+    log('  1. Open Obsidian', 'yellow');
+    log('  2. Go to Settings → Community plugins', 'yellow');
+    log('  3. Disable "Restricted mode" (if enabled)', 'yellow');
+    log('  4. Find "Smart Workflow" in installed plugins list', 'yellow');
+    log('  5. Enable the plugin', 'yellow');
+    log('  6. Use Command Palette (Ctrl+P) and type "Terminal" to test\n', 'yellow');
   }
 
-  log('💡 提示:', 'cyan');
-  log('  - 修改代码后运行 pnpm build，然后在 Obsidian 中重新加载插件', 'yellow');
-  log('  - 按 Ctrl+Shift+I 打开开发者工具查看日志', 'yellow');
-  log('  - 快速安装: pnpm install:dev:force\n', 'yellow');
+  log('💡 Tips:', 'cyan');
+  log('  - After code changes, run pnpm build, then reload plugin in Obsidian', 'yellow');
+  log('  - Press Ctrl+Shift+I to open developer tools for logs', 'yellow');
+  log('  - Quick install: pnpm install:dev:force\n', 'yellow');
 
   closeReadline();
 }
 
 main().catch(error => {
-  log(`\n❌ 错误: ${error.message}`, 'red');
+  log(`\n❌ Error: ${error.message}`, 'red');
   closeReadline();
   process.exit(1);
 });

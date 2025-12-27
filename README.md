@@ -58,10 +58,7 @@ pnpm i
 pnpm build
 
 # Build PTY server binary (for terminal feature)
-node scripts/build-rust.js win32-x64      # Windows
-node scripts/build-rust.js darwin-arm64   # macOS Apple Silicon
-node scripts/build-rust.js darwin-x64     # macOS Intel
-node scripts/build-rust.js linux-x64      # Linux
+node scripts/build-rust.js
 
 # Install to Obsidian (interactive)
 pnpm install:dev
@@ -129,12 +126,6 @@ A: Yes. This plugin is compatible with OpenAI format interfaces. For models like
 A: Please check if the Prompt template is reasonable, or enable Debug Mode and press `Ctrl+Shift+I` to open the console and view the content actually returned by the AI.
 
 ### Terminal Features
-**Q: What should I do if the terminal won't start?**
-A: Please check the following:
-1. Verify that the Shell path is correct (the settings will automatically validate path validity).
-2. Check the developer console (Ctrl+Shift+I) for error messages.
-3. Try using the diagnostic script: `node scripts/diagnose-terminal.js`.
-
 **Q: How do I change the terminal Shell?**
 A: In Settings > Terminal > Shell Configuration, enter a custom Shell path. For example:
 - Windows PowerShell: `C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe`

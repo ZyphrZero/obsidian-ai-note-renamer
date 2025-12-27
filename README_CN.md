@@ -55,10 +55,7 @@ pnpm i
 pnpm build
 
 # 构建 PTY 服务器二进制（终端功能需要）
-node scripts/build-rust.js win32-x64      # Windows
-node scripts/build-rust.js darwin-arm64   # macOS Apple Silicon
-node scripts/build-rust.js darwin-x64     # macOS Intel
-node scripts/build-rust.js linux-x64      # Linux
+node scripts/build-rust.js
 
 # 安装到 Obsidian（交互式）
 pnpm install:dev
@@ -126,12 +123,6 @@ A: 支持。本插件兼容 OpenAI 格式接口。对于 DeepSeek 等输出 "思
 A: 请检查 Prompt 模板是否合理，或者开启调试模式并按下 `Ctrl+Shift+I` 打开控制台，查看 AI 实际返回的内容。
 
 ### 终端功能
-**Q: 终端无法启动怎么办？**
-A: 请检查以下几点：
-1. 确认 Shell 路径是否正确（设置中会自动验证路径有效性）。
-2. 查看开发者控制台（Ctrl+Shift+I）是否有错误信息。
-3. 尝试使用诊断脚本：`node scripts/diagnose-terminal.js`。
-
 **Q: 如何更换终端 Shell？**
 A: 在设置 > 终端 > Shell 配置中，输入自定义 Shell 路径。例如：
 - Windows PowerShell: `C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe`
